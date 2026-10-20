@@ -1,13 +1,26 @@
 apply plugin: 'com.android.application'
-apply plugin: 'com.novoda.build-properties'
 
-buildProperties {
-    getPublic {
-        file rootProject.file('public.properties')
+// load properties: local.properties (private, optional) overrides public.properties
+def loadProps = {
+    def props = new Properties()
+    def publicFile = rootProject.file('public.properties')
+    def localFile = rootProject.file('local.properties')
+    if (publicFile.exists()) {
+        publicFile.withInputStream { props.load(it) }
     }
-    getLocal {
-        file rootProject.file('local.properties')
+    if (localFile.exists()) {
+        def localProps = new Properties()
+        localFile.withInputStream { localProps.load(it) }
+        props.putAll(localProps)
     }
+    return props
+}
+def appProps = loadProps()
+
+def prop = { String name ->
+    def value = appProps.getProperty(name, '')
+    // keep quoted values as plain string literals for buildConfigField
+    return value
 }
 
 android {
@@ -23,23 +36,26 @@ android {
         vectorDrawables.useSupportLibrary = true
         multiDexEnabled false
 
-        buildConfigField "String", "OPENHUB_CLIENT_ID", (buildProperties.getLocal['openhub_client_id'] | buildProperties.getPublic['openhub_client_id']).string
-        buildConfigField "String", "OPENHUB_CLIENT_SECRET", (buildProperties.getLocal['openhub_client_secret'] | buildProperties.getPublic['openhub_client_secret']).string
-        buildConfigField "String", "BUGLY_ID", (buildProperties.getLocal['bugly_appid'] | buildProperties.getPublic['bugly_appid']).string
-        buildConfigField "String", "DEBUG_BUGLY_ID", (buildProperties.getLocal['debug_bugly_appid'] | buildProperties.getPublic['debug_bugly_appid']).string
+        buildConfigField "String", "OPENHUB_CLIENT_ID", prop('openhub_client_id')
+        buildConfigField "String", "OPENHUB_CLIENT_SECRET", prop('openhub_client_secret')
 
         ndk {
-//            abiFilters 'armeabi', 'armeabi-v7a', 'x86'
-            abiFilters 'armeabi', 'armeabi-v7a', 'arm64-v8a', 'x86', 'x86_64'
+            abiFilters 'armeabi-v7a', 'arm64-v8a', 'x86', 'x86_64'
         }
     }
 
-    signingConfigs  {
+    // use release keystore only when it is actually available,
+    // otherwise fall back to the default debug keystore so CI/local
+    // builds always produce an installable apk
+    signingConfigs {
         release {
-            storeFile(file((buildProperties.getLocal['sign_path'] | buildProperties.getPublic['sign_path']).string))
-            storePassword((buildProperties.getLocal['store_password'] | buildProperties.getPublic['store_password']).string)
-            keyAlias((buildProperties.getLocal['key_alias'] | buildProperties.getPublic['key_alias']).string)
-            keyPassword((buildProperties.getLocal['key_password'] | buildProperties.getPublic['key_password']).string)
+            def signPath = prop('sign_path')
+            if (signPath != null && !signPath.isEmpty() && file(signPath).exists()) {
+                storeFile file(signPath)
+                storePassword prop('store_password')
+                keyAlias prop('key_alias')
+                keyPassword prop('key_password')
+            }
         }
     }
 
@@ -47,10 +63,10 @@ android {
         release {
             minifyEnabled true
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
-            signingConfig signingConfigs.release
-        }
-        debug {
-            signingConfig signingConfigs.release
+            def signPath = prop('sign_path')
+            if (signPath != null && !signPath.isEmpty() && file(signPath).exists()) {
+                signingConfig signingConfigs.release
+            }
         }
     }
 
@@ -81,10 +97,6 @@ android {
         }
     }
 
-    productFlavors.all {
-        flavor -> flavor.manifestPlaceholders = [BUGLY_APP_CHANNEL_VALUE: name]
-    }
-
 }
 
 repositories {
@@ -102,10 +114,7 @@ dependencies {
     })
     testImplementation 'junit:junit:4.12'
 
-//    compile "com.android.support:support-annotations:${ANDROID_SUPPORT_VERSION}"
-
     implementation "com.android.support:support-v4:${ANDROID_SUPPORT_VERSION}"
-//    compile "com.android.support:support-v13:${ANDROID_SUPPORT_VERSION}"
     implementation "com.android.support:appcompat-v7:${ANDROID_SUPPORT_VERSION}"
     implementation "com.android.support:recyclerview-v7:${ANDROID_SUPPORT_VERSION}"
     implementation "com.android.support:design:${ANDROID_SUPPORT_VERSION}"
@@ -116,7 +125,6 @@ dependencies {
     implementation "com.android.support:customtabs:${ANDROID_SUPPORT_VERSION}"
 
     implementation "com.android.support.constraint:constraint-layout:${CONSTRAINT_VERSION}"
-//    compile "com.android.support:multidex:${MULTIDEX_VERSION}"
 
     implementation "com.thirtydegreesray:dataautoaccess:${DATAAUTOACCESS_VERSION}"
     annotationProcessor "com.thirtydegreesray:dataautoaccess-compiler:${DATAAUTOACCESS_VERSION}"
@@ -128,7 +136,6 @@ dependencies {
     implementation "org.greenrobot:greendao:${GREEN_DAO_VERSION}"
     //事件总线
     implementation "org.greenrobot:eventbus:${EVENT_BUS_VERSION}"
-    //文件下载
 
     //RxJava
     implementation "io.reactivex:rxjava:${RXJAVA_VERSION}"
@@ -143,6 +150,8 @@ dependencies {
         exclude group: 'stax', module: 'stax-api'
         exclude group: 'stax', module: 'stax'
     }
+    //explicit okhttp version for bug fixes / modern TLS & http2 handling
+    implementation "com.squareup.okhttp3:okhttp:${OKHTTP_VERSION}"
 
     //dagger依赖注入
     implementation "com.google.dagger:dagger:${DAGGER_VERSION}"
@@ -153,7 +162,6 @@ dependencies {
     implementation "com.github.bumptech.glide:glide:${GLIDE_VERSION}"
     annotationProcessor "com.github.bumptech.glide:compiler:${GLIDE_VERSION}"
 
-//    compile "com.makeramen:roundedimageview:${ROUNDED_IMAGEVIEW_VERSION}"
     implementation "de.hdodenhof:circleimageview:${CIRCLE_IMAGEVIEW_VERSION}"
 
     implementation "com.github.GrenderG:Toasty:${TOASTY_VERSION}"

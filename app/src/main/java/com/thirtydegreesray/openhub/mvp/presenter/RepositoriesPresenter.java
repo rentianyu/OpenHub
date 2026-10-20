@@ -498,13 +498,17 @@ public class RepositoriesPresenter extends BasePagerPresenter<IRepositoriesContr
     }
 
     private Repository parseTrendingRepositoryData(Element element) throws Exception{
-        String fullName = element.select("h1 > a").attr("href");
-        fullName = fullName.substring(1);
+        Element linkElement = element.select("h2 > a, h1 > a").first();
+        if(linkElement == null){
+            throw new Exception("trending repo link element not found");
+        }
+        String fullName = linkElement.attr("href");
+        if(fullName.startsWith("/")){
+            fullName = fullName.substring(1);
+        }
         String owner = fullName.substring(0, fullName.lastIndexOf("/"));
         String repoName = fullName.substring(fullName.lastIndexOf("/") + 1);
 
-        Element descElement = element.getElementsByClass("col-9 color-text-secondary my-1 pr-4").first();
-        Element numElement = element.getElementsByClass("f6 color-text-secondary mt-2").first();
         StringBuilder desc = new StringBuilder("");
         String language = "unknown";
         String starNumStr = "0";
@@ -512,30 +516,31 @@ public class RepositoriesPresenter extends BasePagerPresenter<IRepositoriesContr
         String periodNumStr = "0";
 
         try{
+            Element descElement = element.select("p").first();
             if(null != descElement){
-                for(TextNode textNode : descElement.textNodes()){
-                    desc.append(textNode.getWholeText());
-                }
+                desc.append(descElement.text());
             }
 
+            Element numElement = element.select("div.f6").first();
             if(null != numElement){
-                Elements languageElements = numElement.select("span > span");
-                if(null != languageElements && languageElements.size() > 0){
-                    language = numElement.select("span > span").get(1).textNodes().get(0).toString().trim();
+                Element languageElement = numElement.select("[itemprop=programmingLanguage]").first();
+                if(languageElement == null){
+                    Elements languageElements = numElement.select("span > span");
+                    if(languageElements.size() > 1){
+                        languageElement = languageElements.get(1);
+                    }
                 }
-                starNumStr =  numElement.select("a").get(0).textNodes().get(1).toString()
-                        .replaceAll(" ", "").replaceAll(",", "");
-                forkNumStr =  numElement.select("a").get(1).textNodes().get(1).toString()
-                        .replaceAll(" ", "").replaceAll(",", "");
-                Element periodElement =  numElement.getElementsByClass("d-inline-block float-sm-right").first();
+                if(languageElement != null && !StringUtils.isBlank(languageElement.text())){
+                    language = languageElement.text().trim();
+                }
+                starNumStr = parseTrendingNumber(numElement.select("a[href$=/stargazers]").first());
+                forkNumStr = parseTrendingNumber(numElement.select("a[href$=/forks]").first());
+                Element periodElement = numElement.select("span.d-inline-block.float-sm-right").first();
                 if(periodElement != null){
-                    periodNumStr = periodElement.childNodes().get(2).toString().trim();
-                    periodNumStr = periodNumStr.substring(0, periodNumStr.indexOf(" "))
-                            .replaceAll(",", "");
+                    periodNumStr = parseTrendingNumber(periodElement);
                 }
             }
         }catch (Exception e){
-            desc = new StringBuilder("desc parse error.");
             Logger.e("Trending repo desc or num info parse error.", e);
         }
 
@@ -544,17 +549,35 @@ public class RepositoriesPresenter extends BasePagerPresenter<IRepositoriesContr
         repo.setName(repoName);
         User user = new User();
         user.setLogin(owner);
+        user.setAvatarUrl("https://github.com/".concat(owner).concat(".png"));
         repo.setOwner(user);
 
         repo.setDescription(desc.toString().trim()
                 .replaceAll("\n", ""));
-        repo.setStargazersCount(Integer.parseInt(starNumStr));
-        repo.setForksCount(Integer.parseInt(forkNumStr));
-        repo.setSinceStargazersCount(Integer.parseInt(periodNumStr));
+        repo.setStargazersCount(parseIntSafe(starNumStr));
+        repo.setForksCount(parseIntSafe(forkNumStr));
+        repo.setSinceStargazersCount(parseIntSafe(periodNumStr));
         repo.setLanguage(language);
         repo.setSince(since);
 
         return repo;
+    }
+
+    /**
+     * extract a plain number from trending page fragments like "59,497" or "3,897 stars today"
+     */
+    private String parseTrendingNumber(Element element){
+        if(element == null) return "0";
+        String digits = element.text().replaceAll("[^0-9]", "");
+        return digits.isEmpty() ? "0" : digits;
+    }
+
+    private int parseIntSafe(String numStr){
+        try {
+            return Integer.parseInt(numStr);
+        } catch (NumberFormatException e) {
+            return 0;
+        }
     }
 
     public TrendingLanguage getLanguage() {

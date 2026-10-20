@@ -7,8 +7,24 @@
     <uses-permission android:name="android.permission.INTERNET"/>
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
     <uses-permission android:name="android.permission.ACCESS_WIFI_STATE"/>
-    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"/>
-    <uses-permission android:name="android.permission.MOUNT_UNMOUNT_FILESYSTEMS"/>
+    <!-- only needed below Android 10 for legacy download path -->
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"
+        android:maxSdkVersion="28"/>
+
+    <!-- package visibility (Android 11+): allow resolving browsers / custom tabs -->
+    <queries>
+        <intent>
+            <action android:name="android.intent.action.VIEW"/>
+            <data android:scheme="http"/>
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.VIEW"/>
+            <data android:scheme="https"/>
+        </intent>
+        <intent>
+            <action android:name="android.support.customtabs.action.CustomTabsService"/>
+        </intent>
+    </queries>
 
     <application
         android:name=".AppApplication"
@@ -21,9 +37,9 @@
         tools:replace="android:supportsRtl">
 
 
-        <receiver android:name=".service.NetBroadcastReceiver"/>
-        <receiver android:name=".service.ShareBroadcastReceiver"/>
-        <receiver android:name=".service.CopyBroadcastReceiver"/>
+        <receiver android:name=".service.NetBroadcastReceiver" android:exported="false"/>
+        <receiver android:name=".service.ShareBroadcastReceiver" android:exported="false"/>
+        <receiver android:name=".service.CopyBroadcastReceiver" android:exported="false"/>
 
         <provider
             android:name="android.support.v4.content.FileProvider"
@@ -37,6 +53,7 @@
 
         <activity
             android:name=".ui.activity.SplashActivity"
+            android:exported="true"
             android:screenOrientation="portrait"
             android:theme="@style/SplashTheme">
             <intent-filter>
@@ -53,6 +70,7 @@
 
         <activity
             android:name=".ui.activity.LoginActivity"
+            android:exported="true"
             android:label="@string/app_name"
             android:launchMode="singleTask"
             android:screenOrientation="portrait">
@@ -68,6 +86,7 @@
 
         <activity
             android:name=".ui.activity.BrowserFilterActivity"
+            android:exported="true"
             android:excludeFromRecents="true"
             android:taskAffinity=""
             android:theme="@style/SplashTheme">

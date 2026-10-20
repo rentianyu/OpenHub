@@ -25,6 +25,7 @@ import com.thirtydegreesray.openhub.ui.activity.RepositoryActivity;
 import com.thirtydegreesray.openhub.ui.adapter.NotificationsAdapter;
 import com.thirtydegreesray.openhub.ui.adapter.base.DoubleTypesModel;
 import com.thirtydegreesray.openhub.ui.fragment.base.ListFragment;
+import com.thirtydegreesray.openhub.util.AppOpener;
 import com.thirtydegreesray.openhub.util.BundleHelper;
 
 import java.util.ArrayList;
@@ -100,7 +101,8 @@ public class NotificationsFragment extends ListFragment<NotificationsPresenter, 
             RepositoryActivity.show(getActivity(), repository.getOwner().getLogin(), repository.getName());
         }else{
             String url = notification.getSubject().getUrl();
-            switch (notification.getSubject().getType()){
+            NotificationSubject.Type type = notification.getSubject().getType();
+            switch (type == null ? NotificationSubject.Type.Issue : type){
                 case Issue:
                     IssueDetailActivity.show(getActivity(), url);
                     break;
@@ -110,10 +112,17 @@ public class NotificationsFragment extends ListFragment<NotificationsPresenter, 
                 case PullRequest:
                     showInfoToast(getString(R.string.developing));
                     break;
+                default:
+                    //Discussion, Release and other new subject types:
+                    //fall back to opening the page in browser instead of crashing
+                    if(getActivity() != null){
+                        AppOpener.openInCustomTabsOrBrowser(getActivity(), toHtmlUrl(url));
+                    }
+                    break;
             }
 
             if(notification.isUnread() &&
-                    !notification.getSubject().getType().equals(NotificationSubject.Type.PullRequest)){
+                    !(type == NotificationSubject.Type.PullRequest)){
                 mPresenter.markNotificationAsRead(notification.getId());
                 notification.setUnread(false);
                 adapter.notifyItemChanged(position);
@@ -122,6 +131,18 @@ public class NotificationsFragment extends ListFragment<NotificationsPresenter, 
 
         }
 
+    }
+
+    /**
+     * convert a github api url to its html page url for browser fallback
+     * e.g. https://api.github.com/repos/o/r/issues/1 -> https://github.com/o/r/issues/1
+     */
+    private String toHtmlUrl(String apiUrl){
+        if(apiUrl == null) return "";
+        String url = apiUrl.replace("https://api.github.com/repos/", "https://github.com/");
+        url = url.replace("/pulls/", "/pull/");
+        url = url.replace("/commits/", "/commit/");
+        return url;
     }
 
     @Override

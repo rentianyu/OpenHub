@@ -15,6 +15,7 @@ import android.view.View;
 import android.widget.ImageView;
 import android.widget.TextView;
 
+import com.orhanobut.logger.Logger;
 import com.thirtydegreesray.openhub.R;
 import com.thirtydegreesray.openhub.common.GlideApp;
 import com.thirtydegreesray.openhub.mvp.model.Event;
@@ -261,10 +262,28 @@ public class ActivitiesAdapter extends BaseAdapter<ActivitiesAdapter.ViewHolder,
             return str.substring(0, str.indexOf("\n"));
         }
 
+        /**
+         * safe replacement for Enum.valueOf, returns null on unknown action strings
+         * instead of throwing IllegalArgumentException (crash on new github events)
+         */
+        private <T extends Enum<T>> T safeValueOf(Class<T> clazz, String value){
+            if(value == null) return null;
+            try {
+                return Enum.valueOf(clazz, value);
+            } catch (IllegalArgumentException e) {
+                Logger.w("Unknown enum value " + value + " for " + clazz.getSimpleName());
+                return null;
+            }
+        }
+
         private String getPullRequestReviewEventStr(String action){
             EventPayload.PullRequestReviewEventActionType actionType =
-                    EventPayload.PullRequestReviewEventActionType.valueOf(action);
+                    safeValueOf(EventPayload.PullRequestReviewEventActionType.class, action);
+            if(actionType == null){
+                return getString(R.string.submitted_pull_request_review_at);
+            }
             switch (actionType){
+                case created:
                 case submitted:
                     return getString(R.string.submitted_pull_request_review_at);
                 case edited:
@@ -278,7 +297,10 @@ public class ActivitiesAdapter extends BaseAdapter<ActivitiesAdapter.ViewHolder,
 
         private String getPullRequestReviewCommentEventStr(String action){
             EventPayload.PullRequestReviewCommentEventActionType actionType =
-                    EventPayload.PullRequestReviewCommentEventActionType.valueOf(action);
+                    safeValueOf(EventPayload.PullRequestReviewCommentEventActionType.class, action);
+            if(actionType == null){
+                return getString(R.string.created_pull_request_comment_at);
+            }
             switch (actionType){
                 case created:
                     return getString(R.string.created_pull_request_comment_at);
@@ -292,7 +314,11 @@ public class ActivitiesAdapter extends BaseAdapter<ActivitiesAdapter.ViewHolder,
         }
 
         private String getMemberEventStr(String action){
-            EventPayload.MemberEventActionType actionType = EventPayload.MemberEventActionType.valueOf(action);
+            EventPayload.MemberEventActionType actionType =
+                    safeValueOf(EventPayload.MemberEventActionType.class, action);
+            if(actionType == null){
+                return getString(R.string.added_member_to);
+            }
             switch (actionType){
                 case added:
                     return getString(R.string.added_member_to);
@@ -306,7 +332,11 @@ public class ActivitiesAdapter extends BaseAdapter<ActivitiesAdapter.ViewHolder,
         }
 
         private String getIssueEventStr(String action){
-            EventPayload.IssueEventActionType actionType = EventPayload.IssueEventActionType.valueOf(action);
+            EventPayload.IssueEventActionType actionType =
+                    safeValueOf(EventPayload.IssueEventActionType.class, action);
+            if(actionType == null){
+                return getString(R.string.opened_issue_at);
+            }
             switch (actionType){
                 case assigned:
                     return getString(R.string.assigned_issue_at);

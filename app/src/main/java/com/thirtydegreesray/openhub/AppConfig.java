@@ -55,8 +55,6 @@ public class AppConfig {
 
     public final static String REDIRECT_URL = "https://github.com/ThirtyDegreesRay/OpenHub/CallBack";
 
-    public final static String BUGLY_APPID = BuildConfig.DEBUG ? BuildConfig.DEBUG_BUGLY_ID : BuildConfig.BUGLY_ID;
-
     public final static String OPENHUB_RELEASE_SIGN_MD5 = "C0:99:37:D9:6A:36:FB:B7:AB:4C:5E:3D:42:96:FA:AF";
 
     public final static List<String> COMMON_PAGE_URL_LIST = Arrays.asList(

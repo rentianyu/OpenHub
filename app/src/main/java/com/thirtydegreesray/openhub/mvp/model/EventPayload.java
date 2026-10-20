@@ -22,7 +22,9 @@ public class EventPayload implements Parcelable {
 
     public enum IssueEventActionType{
         assigned, unassigned, labeled, unlabeled, opened,
-        edited, milestoned, demilestoned, closed, reopened
+        edited, milestoned, demilestoned, closed, reopened,
+        deleted, locked, unlocked, pinned, unpinned,
+        subscribed, unsubscribed, transferred, converted_to_discussion
     }
 
     public enum MemberEventActionType{
@@ -38,7 +40,9 @@ public class EventPayload implements Parcelable {
     }
 
     public enum PullRequestReviewEventActionType{
-        submitted, edited, dismissed
+        // "created" is the action sent by the current GitHub api,
+        // "submitted" is kept for compatibility with older payloads
+        created, submitted, edited, dismissed
     }
 
     //PushEvent

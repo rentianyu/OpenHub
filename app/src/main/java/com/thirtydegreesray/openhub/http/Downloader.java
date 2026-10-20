@@ -9,6 +9,7 @@ import android.content.IntentFilter;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteException;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Environment;
 import android.widget.Toast;
 
@@ -63,16 +64,22 @@ public class Downloader {
                 Toasty.error(mContext, mContext.getString(R.string.download_failed), Toast.LENGTH_SHORT).show();
                 return;
             }
-            new RxPermissions(BaseActivity.getCurActivity())
-                    .request(Manifest.permission.WRITE_EXTERNAL_STORAGE)
-                    .subscribe(granted -> {
-                        if (granted) {
-                            start();
-                        } else {
-                            Toasty.error(mContext, mContext.getString(R.string.permission_storage_denied),
-                                    Toast.LENGTH_LONG).show();
-                        }
-                    });
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                // DownloadManager needs no storage permission on Android 10+,
+                // and WRITE_EXTERNAL_STORAGE is not grantable anymore on Android 13+
+                start();
+            } else {
+                new RxPermissions(BaseActivity.getCurActivity())
+                        .request(Manifest.permission.WRITE_EXTERNAL_STORAGE)
+                        .subscribe(granted -> {
+                            if (granted) {
+                                start();
+                            } else {
+                                Toasty.error(mContext, mContext.getString(R.string.permission_storage_denied),
+                                        Toast.LENGTH_LONG).show();
+                            }
+                        });
+            }
         }catch (Exception e){
             Toasty.error(mContext, e.getMessage()).show();
         }
@@ -100,10 +107,19 @@ public class Downloader {
         downloadManager = (DownloadManager) mContext.getSystemService(Context.DOWNLOAD_SERVICE);
         downloadId = downloadManager.enqueue(request);
 
-        mContext.registerReceiver(receiver,
-                new IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE));
+        registerDownloadReceiver();
 
         Toasty.success(mContext, mContext.getString(R.string.download_start)).show();
+    }
+
+    private void registerDownloadReceiver() {
+        IntentFilter filter = new IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            // targetSdk 34 requires an explicit export flag for context-registered receivers
+            mContext.registerReceiver(receiver, filter, Context.RECEIVER_NOT_EXPORTED);
+        } else {
+            mContext.registerReceiver(receiver, filter);
+        }
     }
 
     private BroadcastReceiver receiver = new BroadcastReceiver() {

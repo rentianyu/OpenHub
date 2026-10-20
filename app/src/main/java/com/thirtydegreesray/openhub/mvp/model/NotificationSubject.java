@@ -12,7 +12,7 @@ import android.os.Parcelable;
 public class NotificationSubject implements Parcelable {
 
     public enum Type{
-        Issue, PullRequest, Commit
+        Issue, PullRequest, Commit, Discussion, Release
     }
 
     private String title;

@@ -58,11 +58,13 @@ public class AppOpener {
             Intent shareIntent = new Intent(context.getApplicationContext(), ShareBroadcastReceiver.class);
             shareIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
             PendingIntent sharePendingIntent = PendingIntent.getBroadcast(
-                    context.getApplicationContext(), 0, shareIntent, 0);
+                    context.getApplicationContext(), 0, shareIntent,
+                    PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
             Intent copyIntent = new Intent(context.getApplicationContext(), CopyBroadcastReceiver.class);
             copyIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
             PendingIntent copyPendingIntent = PendingIntent.getBroadcast(
-                    context.getApplicationContext(), 0, copyIntent, 0);
+                    context.getApplicationContext(), 0, copyIntent,
+                    PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
 
             CustomTabsIntent customTabsIntent = new CustomTabsIntent.Builder()
                     .setToolbarColor(ViewUtils.getPrimaryColor(context))
@@ -74,7 +76,14 @@ public class AppOpener {
 //                    .setExitAnimations(context, android.R.anim.slide_in_left, android.R.anim.slide_out_right)
                     .build();
             customTabsIntent.intent.setPackage(customTabsPackageName);
-            customTabsIntent.launchUrl(context, Uri.parse(url));
+            try {
+                customTabsIntent.launchUrl(context, Uri.parse(url));
+            } catch (ActivityNotFoundException e) {
+                //custom tabs browser was uninstalled, fall back to normal browser
+                Toasty.warning(context, context.getString(R.string.no_browser_clients), Toast.LENGTH_LONG).show();
+                openInBrowser(context, url);
+                return;
+            }
 
             if(PrefUtils.isCustomTabsTipsEnable()){
                 Toasty.info(context, context.getString(R.string.use_custom_tabs_tips), Toast.LENGTH_LONG).show();
@@ -93,7 +102,11 @@ public class AppOpener {
         intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
         intent = createActivityChooserIntent(context, intent, uri, VIEW_IGNORE_PACKAGE);
         if(intent != null){
-            context.startActivity(intent);
+            try {
+                context.startActivity(intent);
+            } catch (ActivityNotFoundException e) {
+                Toasty.warning(context, context.getString(R.string.no_browser_clients), Toast.LENGTH_LONG).show();
+            }
         } else {
             Toasty.warning(context, context.getString(R.string.no_browser_clients), Toast.LENGTH_LONG).show();
         }

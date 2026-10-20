@@ -1,18 +1,22 @@
 
 buildscript {
     repositories {
-        jcenter()
         google()
+        mavenCentral()
+        maven { url 'https://maven.aliyun.com/repository/public' }
     }
     dependencies {
-        classpath 'com.android.tools.build:gradle:4.1.0'
-        classpath 'com.novoda:gradle-build-properties-plugin:0.3'
+        classpath 'com.android.tools.build:gradle:7.4.2'
     }
 }
 
 allprojects {
     repositories {
-        jcenter()
+        google()
+        mavenCentral()
+        maven { url 'https://jitpack.io' }
+        // fallback mirror for legacy jcenter-only artifacts
+        maven { url 'https://maven.aliyun.com/repository/public' }
     }
 }
 

@@ -121,7 +121,8 @@ public class SplashPresenter extends BasePresenter<ISplashContract.View>
     }
 
     private boolean isExpired(AuthUser selectedUser){
-        return selectedUser.getAuthTime().getTime() + selectedUser.getExpireIn() * 1000
+        // use 1000L to avoid int overflow (expireIn * 1000 exceeds Integer.MAX_VALUE)
+        return selectedUser.getAuthTime().getTime() + selectedUser.getExpireIn() * 1000L
                 < System.currentTimeMillis();
     }
 

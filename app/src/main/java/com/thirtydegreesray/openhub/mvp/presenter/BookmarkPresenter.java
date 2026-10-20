@@ -55,9 +55,13 @@ public class BookmarkPresenter extends BasePresenter<IBookmarkContract.View>
                         BookmarkExt ext = BookmarkExt.generate(bookmark);
                         if("user".equals(bookmark.getType())){
                             LocalUser localUser = daoSession.getLocalUserDao().load(ext.getUserId());
+                            //skip broken bookmarks whose user data no longer exists
+                            if(localUser == null) continue;
                             ext.setUser(User.generateFromLocalUser(localUser));
                         }else{
                             LocalRepo localRepo = daoSession.getLocalRepoDao().load(ext.getRepoId());
+                            //skip broken bookmarks whose repo data no longer exists
+                            if(localRepo == null) continue;
                             ext.setRepository(Repository.generateFromLocalRepo(localRepo));
                         }
                         tempBookmarks.add(ext);
