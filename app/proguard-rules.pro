@@ -26,13 +26,15 @@
 
 -dontusemixedcaseclassnames
 -dontskipnonpubliclibraryclasses
--dontwarn
--verbose
-
--dontoptimize
--dontpreverify
 
 -ignorewarnings
+
+-keepattributes Signature
+-keepattributes InnerClasses
+-keepattributes EnclosingMethod
+-keepattributes *Annotation*
+-keepattributes SourceFile,LineNumberTable
+-renamesourcefileattribute SourceFile
 
 -dontwarn javax.annotation.**
 -dontwarn javax.inject.**
@@ -71,8 +73,8 @@ public static java.lang.String TABLENAME;
   public *;
 }
 
-#Bugly
--keep class android.support.**{*;}
+#Bugly (kept for compatibility with old crash reporting builds)
+-dontwarn com.tencent.bugly.**
 
 # OkHttp3
 -dontwarn okhttp3.logging.**
@@ -95,8 +97,13 @@ public static java.lang.String TABLENAME;
     rx.internal.util.atomic.LinkedQueueNode consumerNode;
 }
 # Gson
+-keep class com.google.gson.** { *; }
 -keep class com.google.gson.stream.** { *; }
--keepattributes EnclosingMethod
+-keep,allowobfuscation,allowshrinking class com.google.gson.reflect.TypeToken
+-keep,allowobfuscation,allowshrinking class * extends com.google.gson.reflect.TypeToken
+-keepclassmembers,allowobfuscation class * {
+    @com.google.gson.annotations.SerializedName <fields>;
+}
 -keep class com.thirtydegreesray.openhub.mvp.model.**{*;}
 -keep class com.thirtydegreesray.openhub.dao.**{*;}
 # SimpleXml

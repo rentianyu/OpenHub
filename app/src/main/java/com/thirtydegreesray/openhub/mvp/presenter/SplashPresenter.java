@@ -91,10 +91,20 @@ public class SplashPresenter extends BasePresenter<ISplashContract.View>
         HttpObserver<User> httpObserver = new HttpObserver<User>() {
             @Override
             public void onError(@NonNull Throwable error) {
-                daoSession.getAuthUserDao().delete(AppData.INSTANCE.getAuthUser());
-                AppData.INSTANCE.setAuthUser(null);
-                mView.showErrorToast(getErrorTip(error));
-                mView.showLoginPage();
+                // Keep the saved account when the failure is caused by the network.
+                // Offline mode is supported, so a temporary connection problem must
+                // not sign the user out.
+                AuthUser cachedAuthUser = AppData.INSTANCE.getAuthUser();
+                if (cachedAuthUser != null) {
+                    AppData.INSTANCE.setLoggedUser(User.generateFromAuthUser(cachedAuthUser));
+                    mView.showErrorToast(getErrorTip(error));
+                    if (!isMainPageShowwed) {
+                        isMainPageShowwed = true;
+                        mView.showMainPage();
+                    }
+                } else {
+                    mView.showLoginPage();
+                }
             }
 
             @Override
@@ -121,6 +131,9 @@ public class SplashPresenter extends BasePresenter<ISplashContract.View>
     }
 
     private boolean isExpired(AuthUser selectedUser){
+        if (selectedUser.getAuthTime() == null) {
+            return true;
+        }
         // use 1000L to avoid int overflow (expireIn * 1000 exceeds Integer.MAX_VALUE)
         return selectedUser.getAuthTime().getTime() + selectedUser.getExpireIn() * 1000L
                 < System.currentTimeMillis();

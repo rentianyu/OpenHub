@@ -27,6 +27,7 @@
     <string name="password">Password</string>
     <string name="login">Login</string>
     <string name="login_in_browser">LOGIN WITH BROWSER</string>
+    <string name="oauth_state_error">The login request expired. Please try again.</string>
     <string name="oauth_tip">For now we only support OAuth login in browser, Because Github will remove the Authorizations API endpoint on November 13, 2020. </string>
     <string name="user_name_warning">Invalid username!</string>
     <string name="password_warning">Invalid password!</string>
@@ -112,6 +113,8 @@
     <string name="warning_dialog_tile">Warning</string>
     <string name="cancel">Cancel</string>
     <string name="close">Close</string>
+    <string name="copy">Copy</string>
+    <string name="crash_report_title">Last crash log</string>
     <string name="ok">OK</string>
     <string name="confirm">OK</string>
     <string name="select_branch">Select branch or tag</string>

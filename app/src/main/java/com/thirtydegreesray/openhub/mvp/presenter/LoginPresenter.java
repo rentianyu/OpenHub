@@ -20,6 +20,8 @@ import com.thirtydegreesray.openhub.mvp.model.BasicToken;
 import com.thirtydegreesray.openhub.mvp.model.OauthToken;
 import com.thirtydegreesray.openhub.mvp.model.User;
 import com.thirtydegreesray.openhub.mvp.presenter.base.BasePresenter;
+import com.thirtydegreesray.openhub.R;
+import com.thirtydegreesray.openhub.util.PrefUtils;
 import com.thirtydegreesray.openhub.util.StringUtils;
 
 import java.util.Date;
@@ -79,6 +81,7 @@ public class LoginPresenter extends BasePresenter<ILoginContract.View>
     @Override
     public String getOAuth2Url() {
         String randomState = UUID.randomUUID().toString();
+        PrefUtils.set(PrefUtils.OAUTH_STATE, randomState);
         return AppConfig.OAUTH2_URL +
                 "?client_id=" + AppConfig.OPENHUB_CLIENT_ID +
                 "&scope=" + AppConfig.OAUTH2_SCOPE +
@@ -122,6 +125,12 @@ public class LoginPresenter extends BasePresenter<ILoginContract.View>
         if (uri != null) {
             String code = uri.getQueryParameter("code");
             String state = uri.getQueryParameter("state");
+            String savedState = PrefUtils.getDefaultSp().getString(PrefUtils.OAUTH_STATE, null);
+            PrefUtils.clearKey(PrefUtils.OAUTH_STATE);
+            if (StringUtils.isBlank(code) || (savedState != null && !savedState.equals(state))) {
+                mView.onGetTokenError(getString(R.string.oauth_state_error));
+                return;
+            }
             getToken(code, state);
         }
     }

@@ -5,6 +5,8 @@ package com.thirtydegreesray.openhub;
 import android.app.Application;
 import android.content.Context;
 import android.content.IntentFilter;
+import android.content.pm.ApplicationInfo;
+import android.content.pm.PackageManager;
 import android.net.ConnectivityManager;
 import android.os.Build;
 
@@ -16,6 +18,7 @@ import com.thirtydegreesray.openhub.inject.component.DaggerAppComponent;
 import com.thirtydegreesray.openhub.inject.module.AppModule;
 import com.thirtydegreesray.openhub.service.NetBroadcastReceiver;
 import com.thirtydegreesray.openhub.util.AppUtils;
+import com.thirtydegreesray.openhub.util.CrashHandler;
 import com.thirtydegreesray.openhub.util.NetHelper;
 
 /**
@@ -42,7 +45,7 @@ public class AppApplication extends Application {
         //init application
         long startTime = System.currentTimeMillis();
         AppData.INSTANCE.getSystemDefaultLocal();
-        //apply language for application context
+        //apply language for application context, bugly used it
         AppUtils.updateAppLanguage(getApplicationContext());
         initLogger();
         Logger.t(TAG).i("startTime:" + startTime);
@@ -86,13 +89,13 @@ public class AppApplication extends Application {
             filter.addAction("android.net.conn.CONNECTIVITY_CHANGE");
         }
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            // targetSdk 34 requires an explicit export flag for context-registered receivers
             registerReceiver(receiver, filter, Context.RECEIVER_NOT_EXPORTED);
         } else {
             registerReceiver(receiver, filter);
         }
 
         NetHelper.INSTANCE.init(this);
+        CrashHandler.install(this);
     }
 
     public static AppApplication get(){
@@ -101,6 +104,18 @@ public class AppApplication extends Application {
 
     public AppComponent getAppComponent(){
         return mAppComponent;
+    }
+
+    private String getAppChannel(){
+        String channel = "normal";
+        try {
+            ApplicationInfo applicationInfo = getPackageManager()
+                    .getApplicationInfo(getPackageName(), PackageManager.GET_META_DATA);
+            channel = applicationInfo.metaData.getString("BUGLY_APP_CHANNEL", "normal");
+        } catch (PackageManager.NameNotFoundException e) {
+            e.printStackTrace();
+        }
+        return channel;
     }
 
 }

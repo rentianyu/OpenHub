@@ -25,7 +25,7 @@ public enum  NetHelper {
 	private Context mContext;
 
 	public void init(Context context){
-		mContext = context;
+		mContext = context.getApplicationContext();
 		checkNet();
 	}
 
@@ -39,13 +39,13 @@ public enum  NetHelper {
 			if (connectivity != null) {
 				// 获取网络连接管理的对象
 				NetworkInfo info = connectivity.getActiveNetworkInfo();
-				if (info != null&& info.isAvailable()) {
-					// 判断当前网络是否已经连接
-					if (info.getState() == NetworkInfo.State.CONNECTED) {
-						if(info.getType() == ConnectivityManager.TYPE_WIFI)
-							mCurNetStatus =  TYPE_WIFI;
-						if(info.getType() == ConnectivityManager.TYPE_MOBILE)
-							mCurNetStatus =  TYPE_MOBILE;
+				if (info != null && info.isAvailable()
+						&& info.getState() == NetworkInfo.State.CONNECTED) {
+					// Treat VPN, Ethernet and other connected transports as non-mobile.
+					if(info.getType() == ConnectivityManager.TYPE_MOBILE) {
+						mCurNetStatus = TYPE_MOBILE;
+					} else {
+						mCurNetStatus = TYPE_WIFI;
 					}
 				} else{
 					mCurNetStatus = TYPE_DISCONNECT;

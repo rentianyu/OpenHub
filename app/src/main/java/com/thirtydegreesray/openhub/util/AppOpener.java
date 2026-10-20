@@ -11,6 +11,7 @@ import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
 import android.graphics.Bitmap;
 import android.net.Uri;
+import android.os.Build;
 import android.support.annotation.NonNull;
 import android.support.customtabs.CustomTabsIntent;
 import android.widget.Toast;
@@ -55,16 +56,21 @@ public class AppOpener {
         if (PrefUtils.isCustomTabsEnable() &&
                 (customTabsPackageName = CustomTabsHelper.INSTANCE.getBestPackageName(context) ) != null) {
             Bitmap backIconBitmap = ViewUtils.getBitmapFromResource(context, R.drawable.ic_arrow_back_title);
-            Intent shareIntent = new Intent(context.getApplicationContext(), ShareBroadcastReceiver.class);
+            Uri pageUri = Uri.parse(url);
+            int pendingIntentFlags = PendingIntent.FLAG_UPDATE_CURRENT;
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                pendingIntentFlags |= PendingIntent.FLAG_IMMUTABLE;
+            }
+            Intent shareIntent = new Intent(Intent.ACTION_VIEW, pageUri,
+                    context.getApplicationContext(), ShareBroadcastReceiver.class);
             shareIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
             PendingIntent sharePendingIntent = PendingIntent.getBroadcast(
-                    context.getApplicationContext(), 0, shareIntent,
-                    PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
-            Intent copyIntent = new Intent(context.getApplicationContext(), CopyBroadcastReceiver.class);
+                    context.getApplicationContext(), 1, shareIntent, pendingIntentFlags);
+            Intent copyIntent = new Intent(Intent.ACTION_VIEW, pageUri,
+                    context.getApplicationContext(), CopyBroadcastReceiver.class);
             copyIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
             PendingIntent copyPendingIntent = PendingIntent.getBroadcast(
-                    context.getApplicationContext(), 0, copyIntent,
-                    PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+                    context.getApplicationContext(), 2, copyIntent, pendingIntentFlags);
 
             CustomTabsIntent customTabsIntent = new CustomTabsIntent.Builder()
                     .setToolbarColor(ViewUtils.getPrimaryColor(context))
@@ -180,6 +186,10 @@ public class AppOpener {
         String url = uri.toString();
         if(GitHubHelper.isImage(url)){
             ViewerActivity.showImage(context, url);
+            return;
+        }
+        if (!(context instanceof Activity)) {
+            openInCustomTabsOrBrowser(context, url);
             return;
         }
         GitHubName gitHubName = GitHubName.fromUrl(url);

@@ -30,12 +30,15 @@ public class FileUtil {
      * @param dirName 文件夹名称
      * @return 缓存文件夹
      */
-    @Nullable
+    @NonNull
     public static File getCacheDir(@NonNull Context context, @NonNull String dirName) {
         File rootDir = context.getExternalCacheDir();
+        if (rootDir == null) {
+            rootDir = context.getCacheDir();
+        }
         File cacheFile = new File(rootDir, dirName);
-        if (!cacheFile.exists()) {
-            cacheFile.mkdir();
+        if (!cacheFile.exists() && !cacheFile.mkdirs() && !cacheFile.isDirectory()) {
+            return context.getCacheDir();
         }
         return cacheFile;
     }
@@ -87,10 +90,17 @@ public class FileUtil {
      */
     public static String encodeBase64File(@NonNull String path) throws Exception {
         File file = new File(path);
-        FileInputStream inputFile = new FileInputStream(file);
-        byte[] buffer = new byte[(int)file.length()];
-        inputFile.read(buffer);
-        inputFile.close();
+        byte[] buffer = new byte[(int) file.length()];
+        try (FileInputStream inputFile = new FileInputStream(file)) {
+            int offset = 0;
+            while (offset < buffer.length) {
+                int read = inputFile.read(buffer, offset, buffer.length - offset);
+                if (read == -1) {
+                    break;
+                }
+                offset += read;
+            }
+        }
         return Base64.encodeToString(buffer, Base64.DEFAULT);
     }
 

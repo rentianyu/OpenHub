@@ -5,6 +5,9 @@ package com.thirtydegreesray.openhub.ui.activity.base;
 import android.annotation.SuppressLint;
 import android.app.ProgressDialog;
 import android.content.DialogInterface;
+import android.content.ClipData;
+import android.content.ClipboardManager;
+import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.Color;
@@ -40,6 +43,7 @@ import com.thirtydegreesray.openhub.ui.activity.LoginActivity;
 import com.thirtydegreesray.openhub.ui.activity.SplashActivity;
 import com.thirtydegreesray.openhub.ui.widget.DoubleClickHandler;
 import com.thirtydegreesray.openhub.util.AppUtils;
+import com.thirtydegreesray.openhub.util.CrashHandler;
 import com.thirtydegreesray.openhub.util.PrefUtils;
 import com.thirtydegreesray.openhub.util.ThemeHelper;
 import com.thirtydegreesray.openhub.util.WindowUtil;
@@ -51,6 +55,12 @@ import javax.inject.Inject;
 import butterknife.BindView;
 import butterknife.ButterKnife;
 import es.dmoral.toasty.Toasty;
+
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.InputStreamReader;
 
 /**
  * This is base activity to set some common things.
@@ -64,6 +74,7 @@ BaseActivity<P extends IBaseContract.Presenter>
     protected P mPresenter;
     private ProgressDialog mProgressDialog;
     private static BaseActivity curActivity;
+    private static boolean crashReportShown;
 
     protected boolean isAlive = true;
     @BindView(R.id.toolbar) @Nullable protected Toolbar toolbar;
@@ -107,6 +118,50 @@ BaseActivity<P extends IBaseContract.Presenter>
         if(isFullScreen){
             intoFullScreen();
         }
+        showCrashReportIfNeeded();
+    }
+
+    private void showCrashReportIfNeeded() {
+        if (crashReportShown || this instanceof SplashActivity) {
+            return;
+        }
+        File crashFile = CrashHandler.getCrashFile(this);
+        if (!crashFile.exists()) {
+            return;
+        }
+        crashReportShown = true;
+        final String crashLog;
+        try {
+            BufferedReader reader = new BufferedReader(new InputStreamReader(
+                    new FileInputStream(crashFile), "UTF-8"));
+            StringBuilder builder = new StringBuilder();
+            String line;
+            while ((line = reader.readLine()) != null) {
+                builder.append(line).append('\n');
+            }
+            reader.close();
+            crashLog = builder.toString();
+        } catch (IOException e) {
+            crashFile.delete();
+            return;
+        }
+        crashFile.delete();
+        new AlertDialog.Builder(getActivity())
+                .setTitle(R.string.crash_report_title)
+                .setMessage(crashLog)
+                .setPositiveButton(R.string.copy, new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        ClipboardManager manager = (ClipboardManager)
+                                getSystemService(Context.CLIPBOARD_SERVICE);
+                        if (manager != null) {
+                            manager.setPrimaryClip(ClipData.newPlainText("crash", crashLog));
+                            Toasty.success(getActivity(), getString(R.string.copy)).show();
+                        }
+                    }
+                })
+                .setNegativeButton(R.string.close, null)
+                .show();
     }
 
     @Override
@@ -115,7 +170,7 @@ BaseActivity<P extends IBaseContract.Presenter>
         //系统由于内存不足而杀死activity，此时保存数据
         DataAutoAccess.saveData(this, outState);
         if(mPresenter != null) mPresenter.onSaveInstanceState(outState);
-        if(curActivity.equals(this)){
+        if(curActivity != null && curActivity.equals(this)){
             DataAutoAccess.saveData(AppData.INSTANCE, outState);
         }
     }
@@ -261,16 +316,25 @@ BaseActivity<P extends IBaseContract.Presenter>
 
     @Override
     public void showProgressDialog(String content) {
+        if (isFinishing() || isDestroyed()) {
+            return;
+        }
         getProgressDialog(content);
-        mProgressDialog.show();
+        try {
+            mProgressDialog.show();
+        } catch (RuntimeException ignored) {
+            // The activity window may already be gone.
+        }
     }
 
     @Override
     public void dismissProgressDialog() {
-        if(mProgressDialog != null){
-            mProgressDialog.dismiss();
-        }else{
-            throw new NullPointerException("dismissProgressDialog: can't dismiss a null dialog, must showForRepo dialog first!");
+        if (mProgressDialog != null && mProgressDialog.isShowing()) {
+            try {
+                mProgressDialog.dismiss();
+            } catch (RuntimeException ignored) {
+                // The activity window may already be gone.
+            }
         }
     }
 
@@ -313,10 +377,10 @@ BaseActivity<P extends IBaseContract.Presenter>
     public void showTipDialog(String content) {
         new AlertDialog.Builder(getActivity())
                 .setCancelable(true)
-                .setTitle("提示")
+                .setTitle(getString(R.string.tips))
                 .setMessage(content)
                 .setCancelable(true)
-                .setPositiveButton("确定", new DialogInterface.OnClickListener() {
+                .setPositiveButton(getString(R.string.confirm), new DialogInterface.OnClickListener() {
                     @Override
                     public void onClick(@NonNull DialogInterface dialog, int which) {
                         dialog.cancel();
@@ -334,7 +398,7 @@ BaseActivity<P extends IBaseContract.Presenter>
                 .setMessage(msn)
                 .setCancelable(true)
                 .setPositiveButton(confirmText, confirmListener)
-                .setNegativeButton("取消", new DialogInterface.OnClickListener() {
+                .setNegativeButton(getString(R.string.cancel), new DialogInterface.OnClickListener() {
                     @Override
                     public void onClick(@NonNull DialogInterface dialog, int which) {
                         dialog.cancel();

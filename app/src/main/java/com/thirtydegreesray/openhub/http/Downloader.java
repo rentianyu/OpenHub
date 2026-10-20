@@ -30,7 +30,8 @@ public class Downloader {
 
     private DownloadManager downloadManager;
     private Context mContext;
-    private long downloadId;
+    private long downloadId = -1;
+    private boolean receiverRegistered = false;
 
     private String url;
     private String fileName;
@@ -40,7 +41,7 @@ public class Downloader {
     }
 
     private Downloader(Context context){
-        this.mContext = context;
+        this.mContext = context.getApplicationContext();
         AppUtils.updateAppLanguage(context);
     }
 
@@ -52,7 +53,7 @@ public class Downloader {
             }
 
             this.url = url;
-            this.fileName = fileName;
+            this.fileName = sanitizeFileName(fileName);
 
             if(!AppUtils.checkDownloadServiceEnabled(mContext)){
                 Toasty.warning(mContext, mContext.getString(R.string.enable_download_service_tip),
@@ -60,32 +61,42 @@ public class Downloader {
                 AppUtils.showDownloadServiceSetting(mContext);
                 return ;
             }
-            if(BaseActivity.getCurActivity() == null){
-                Toasty.error(mContext, mContext.getString(R.string.download_failed), Toast.LENGTH_SHORT).show();
-                return;
-            }
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                // DownloadManager needs no storage permission on Android 10+,
-                // and WRITE_EXTERNAL_STORAGE is not grantable anymore on Android 13+
-                start();
-            } else {
+
+            // Android 10+ uses scoped storage. DownloadManager can write to the public
+            // Downloads directory without WRITE_EXTERNAL_STORAGE, and that permission
+            // cannot be granted on Android 13+.
+            if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.P) {
+                if(BaseActivity.getCurActivity() == null){
+                    Toasty.error(mContext, mContext.getString(R.string.download_failed), Toast.LENGTH_SHORT).show();
+                    return;
+                }
                 new RxPermissions(BaseActivity.getCurActivity())
                         .request(Manifest.permission.WRITE_EXTERNAL_STORAGE)
                         .subscribe(granted -> {
                             if (granted) {
-                                start();
+                                startDownload();
                             } else {
                                 Toasty.error(mContext, mContext.getString(R.string.permission_storage_denied),
                                         Toast.LENGTH_LONG).show();
                             }
                         });
+            } else {
+                startDownload();
             }
         }catch (Exception e){
             Toasty.error(mContext, e.getMessage()).show();
         }
     }
 
-    private void start() {
+    private String sanitizeFileName(String name) {
+        String result = name.replace('\\', '/').replace("..", "");
+        while (result.startsWith("/")) {
+            result = result.substring(1);
+        }
+        return result;
+    }
+
+    private void startDownload() {
 
         DownloadManager.Request request = new DownloadManager.Request(Uri.parse(url));
         //移动网络情况下是否允许漫游
@@ -99,32 +110,38 @@ public class Downloader {
             title = title.concat(" ").concat(fileName);
         }
         request.setTitle(title);
-//        request.setDescription("Apk Downloading");
         request.setVisibleInDownloadsUi(true);
 
-        request.setDestinationInExternalPublicDir("Download", fileName);
+        request.setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, fileName);
 
         downloadManager = (DownloadManager) mContext.getSystemService(Context.DOWNLOAD_SERVICE);
-        downloadId = downloadManager.enqueue(request);
 
-        registerDownloadReceiver();
+        registerReceiver();
+
+        downloadId = downloadManager.enqueue(request);
 
         Toasty.success(mContext, mContext.getString(R.string.download_start)).show();
     }
 
-    private void registerDownloadReceiver() {
+    private void registerReceiver() {
+        if (receiverRegistered) {
+            return;
+        }
         IntentFilter filter = new IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE);
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            // targetSdk 34 requires an explicit export flag for context-registered receivers
             mContext.registerReceiver(receiver, filter, Context.RECEIVER_NOT_EXPORTED);
         } else {
             mContext.registerReceiver(receiver, filter);
         }
+        receiverRegistered = true;
     }
 
     private BroadcastReceiver receiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
+            if (downloadId != -1 && intent.getLongExtra(DownloadManager.EXTRA_DOWNLOAD_ID, -1) != downloadId) {
+                return;
+            }
             checkStatus();
         }
     };
@@ -165,13 +182,20 @@ public class Downloader {
     }
 
     private String getFilePath(){
-        return Environment.getExternalStorageDirectory().getAbsolutePath()
-                .concat("/Download").concat("/").concat(fileName);
+        return new java.io.File(
+                Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS),
+                fileName).getAbsolutePath();
     }
 
     private void unregister(){
-        mContext.unregisterReceiver(receiver);
-        mContext = null;
+        if (receiverRegistered && mContext != null) {
+            try {
+                mContext.unregisterReceiver(receiver);
+            } catch (IllegalArgumentException ignored) {
+                // Receiver was already unregistered.
+            }
+            receiverRegistered = false;
+        }
     }
 
 }

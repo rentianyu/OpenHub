@@ -17,6 +17,7 @@ import com.thirtydegreesray.openhub.AppConfig;
 import com.thirtydegreesray.openhub.AppData;
 import com.thirtydegreesray.openhub.R;
 import com.thirtydegreesray.openhub.common.AppEventBus;
+import com.thirtydegreesray.openhub.dao.AuthUser;
 import com.thirtydegreesray.openhub.dao.DaoSession;
 import com.thirtydegreesray.openhub.http.CommitService;
 import com.thirtydegreesray.openhub.http.GitHubWebPageService;
@@ -314,9 +315,13 @@ public abstract class BasePresenter<V extends IBaseContract.View> implements IBa
     private boolean checkIsUnauthorized(Throwable error){
         if(error instanceof UnauthorizedError){
             mView.showErrorToast(error.getMessage());
-            daoSession.getAuthUserDao().delete(AppData.INSTANCE.getAuthUser());
+            AuthUser authUser = AppData.INSTANCE.getAuthUser();
+            if (authUser != null) {
+                daoSession.getAuthUserDao().delete(authUser);
+            }
             AppData.INSTANCE.setAuthUser(null);
             AppData.INSTANCE.setLoggedUser(null);
+            AppRetrofit.INSTANCE.clearTokens();
             mView.showLoginPage();
             return true;
         }

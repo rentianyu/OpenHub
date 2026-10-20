@@ -86,6 +86,7 @@ public class ThemeHelper {
                     case PrefUtils.DEEP_PURPLE:
                         return R.style.ThemeLightTeal_DeepPurple;
                 }
+                break;
             case PrefUtils.LIGHT_INDIGO:
                 switch (accentColor){
                     case PrefUtils.LIGHT_BLUE:
@@ -124,6 +125,7 @@ public class ThemeHelper {
                     case PrefUtils.DEEP_PURPLE:
                         return R.style.ThemeLight_DeepPurple;
                 }
+                break;
             case PrefUtils.DARK:
                 switch (accentColor){
                     case PrefUtils.LIGHT_BLUE:
@@ -162,6 +164,7 @@ public class ThemeHelper {
                     case PrefUtils.DEEP_PURPLE:
                         return R.style.ThemeDark_DeepPurple;
                 }
+                break;
             case PrefUtils.AMOLED_DARK:
                 switch (accentColor){
                     case PrefUtils.LIGHT_BLUE:
@@ -197,6 +200,7 @@ public class ThemeHelper {
                     case PrefUtils.DEEP_PURPLE:
                         return R.style.ThemeAmoledDark_DeepPurple;
                 }
+                break;
         }
         return R.style.ThemeLight_Indigo;
     }

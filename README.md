@@ -5,16 +5,17 @@ English | [中文](/README-cn.md)
 
 An **open-source** GitHub Android client app, faster and concise.
 
+
 ## About this fork
 
 This fork (`rentianyu/OpenHub`) modernizes the build and fixes long-standing bugs:
 
-* **Modern Android support**: `targetSdk`/`compileSdk` 29 → **34**, Gradle 6.5 → 7.6.4, Android Gradle Plugin 4.1 → 7.4.2, JDK 11
-* **Android 12/13/14 compatibility**: explicit `android:exported`, `PendingIntent.FLAG_IMMUTABLE`, exported flags for dynamic `BroadcastReceiver`s, package visibility `<queries>`, storage permission only requested below Android 10
-* **Bug fixes**: crash on activity feed with new GitHub event actions (#412/#442/#429), random logout caused by int overflow in token expiry check (#435), login NPE (#387), bookmarks page crash (#85/#403), notification click crash on new subject types (#420), custom-tabs `ActivityNotFoundException` (#445)
+* **Modern Android support**: `targetSdk`/`compileSdk` 29 → **34**, Gradle 8.7, Android Gradle Plugin 8.5.2, JDK 17
+* **Stability**: crash reporting kept on next launch (`CrashHandler`), no more sign-out on temporary network errors, release build keeps accounts across restarts (offline mode works)
+* **Android 12/13/14 compatibility**: explicit `android:exported`, `PendingIntent.FLAG_IMMUTABLE`, exported flags for dynamic `BroadcastReceiver`s, package visibility `<queries>`, Android 12+ splash screen resources (`values-v31`), storage permission only requested below Android 10
+* **Bug fixes**: crash on activity feed with new GitHub event actions (#412/#442/#429), token expiry int overflow (#435), login NPE (#387), bookmarks crash (#85/#403), notification click crash on new subject types (#420), custom-tabs `ActivityNotFoundException` (#445), WebView AppCache API removed in Android 13
 * **Trending page restored**: parser rewritten for the current GitHub trending page layout (#322/#329/#355/#421)
-* **Performance / cleanup**: jcenter replaced with mavenCentral + mirrors, OkHttp 3.6 → 3.12.13, unused Bugly remnants removed
-* **CI**: GitHub Actions workflow (`.github/workflows/build-apk.yml`) builds installable APKs on every push
+* **CI**: GitHub Actions workflow (`.github/workflows/build-apk.yml`) builds installable APKs on every push, tags create Releases
 
 
 [![Google Play](https://raw.githubusercontent.com/ThirtyDegreesRay/OpenHub/master/art/google_play.png?raw=true)](https://play.google.com/store/apps/details?id=com.thirtydegreesray.openhub)

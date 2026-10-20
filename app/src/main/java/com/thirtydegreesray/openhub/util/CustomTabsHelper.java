@@ -89,7 +89,7 @@ public enum  CustomTabsHelper {
         } else if ((bestPackageName = getFirstMatchedPackage(packagesSupportingCustomTabs)) != null) {
             //do nothing
         } else {
-            packagesSupportingCustomTabs.get(0);
+            bestPackageName = packagesSupportingCustomTabs.get(0);
         }
         return bestPackageName;
     }

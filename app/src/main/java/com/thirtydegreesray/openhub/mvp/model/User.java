@@ -2,6 +2,8 @@
 
 package com.thirtydegreesray.openhub.mvp.model;
 
+import com.thirtydegreesray.openhub.dao.AuthUser;
+
 import android.os.Parcel;
 import android.os.Parcelable;
 
@@ -74,6 +76,14 @@ public class User implements Parcelable {
         user.setFollowers(trace.getFollowers());
         user.setFollowing(trace.getFollowing());
         user.setAvatarUrl(trace.getAvatarUrl());
+        return user;
+    }
+
+    public static User generateFromAuthUser(AuthUser authUser){
+        User user = new User();
+        user.setLogin(authUser.getLoginId());
+        user.setName(authUser.getName());
+        user.setAvatarUrl(authUser.getAvatar());
         return user;
     }
 

@@ -30,6 +30,7 @@ import com.thirtydegreesray.openhub.util.GitHubHelper;
 import com.thirtydegreesray.openhub.util.PrefUtils;
 import com.thirtydegreesray.openhub.util.StringUtils;
 
+import java.util.ArrayList;
 import java.util.regex.Matcher;
 
 import javax.inject.Inject;
@@ -203,21 +204,27 @@ public class ActivitiesAdapter extends BaseAdapter<ActivitiesAdapter.ViewHolder,
                     actionStr = String.format(getString(R.string.push_to), branch, fullName);
 
                     descSpan = new SpannableStringBuilder("");
-                    int count = model.getPayload().getCommits().size();
+                    ArrayList<PushEventCommit> commits = model.getPayload().getCommits();
+                    int count = commits == null ? 0 : commits.size();
                     int maxLines = 4;
                     int max = count > maxLines ? maxLines - 1 : count;
 
                     for (int i = 0; i < max; i++) {
-                        PushEventCommit commit = model.getPayload().getCommits().get(i);
+                        PushEventCommit commit = commits.get(i);
                         if (i != 0) {
                             descSpan.append("\n");
                         }
 
                         int lastLength = descSpan.length();
-                        String sha = commit.getSha().substring(0, 7);
+                        String sha = commit.getSha() == null ? "" : commit.getSha();
+                        if (sha.length() > 7) {
+                            sha = sha.substring(0, 7);
+                        }
                         descSpan.append(sha);
-                        descSpan.setSpan(new TextAppearanceSpan(context, R.style.text_link),
-                                lastLength, lastLength + sha.length(), Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
+                        if (sha.length() > 0) {
+                            descSpan.setSpan(new TextAppearanceSpan(context, R.style.text_link),
+                                    lastLength, lastLength + sha.length(), Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
+                        }
 
                         descSpan.append(" ");
                         descSpan.append(getFirstLine(commit.getMessage()));

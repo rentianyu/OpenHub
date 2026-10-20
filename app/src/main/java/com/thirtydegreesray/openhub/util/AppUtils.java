@@ -59,10 +59,16 @@ public class AppUtils {
     }
 
 
+    private static volatile String appliedLanguage;
+
     public static void updateAppLanguage(@NonNull Context context) {
         String lang = PrefUtils.getLanguage();
+        if (lang.equals(appliedLanguage)) {
+            return;
+        }
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) updateResources(context, lang);
         updateResourcesLegacy(context, lang);
+        appliedLanguage = lang;
     }
 
     private static void updateResources(Context context, String language) {

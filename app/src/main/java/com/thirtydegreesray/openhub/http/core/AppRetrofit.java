@@ -1,5 +1,3 @@
-
-
 package com.thirtydegreesray.openhub.http.core;
 
 import android.support.annotation.NonNull;
@@ -9,17 +7,19 @@ import android.util.Log;
 import com.thirtydegreesray.openhub.AppApplication;
 import com.thirtydegreesray.openhub.AppConfig;
 import com.thirtydegreesray.openhub.AppData;
+import com.thirtydegreesray.openhub.BuildConfig;
 import com.thirtydegreesray.openhub.util.FileUtil;
 import com.thirtydegreesray.openhub.util.NetHelper;
 import com.thirtydegreesray.openhub.util.StringUtils;
 
+import java.io.File;
 import java.io.IOException;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Date;
-import java.util.HashMap;
 import java.util.Locale;
 import java.util.TimeZone;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 
 import okhttp3.Cache;
@@ -43,25 +43,38 @@ public enum  AppRetrofit {
 
     private final String TAG = "AppRetrofit";
 
-    private HashMap<String, Retrofit> retrofitMap = new HashMap<>();
-    private String token;
+    private final ConcurrentHashMap<String, Retrofit> retrofitMap = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<String, String> tokenMap = new ConcurrentHashMap<>();
+    private volatile OkHttpClient okHttpClient;
+
+    private OkHttpClient getOkHttpClient() {
+        if (okHttpClient == null) {
+            synchronized (this) {
+                if (okHttpClient == null) {
+                    int timeOut = AppConfig.HTTP_TIME_OUT;
+                    OkHttpClient.Builder builder = new OkHttpClient.Builder()
+                            .connectTimeout(timeOut, TimeUnit.MILLISECONDS)
+                            .readTimeout(timeOut, TimeUnit.MILLISECONDS)
+                            .writeTimeout(timeOut, TimeUnit.MILLISECONDS)
+                            .retryOnConnectionFailure(true)
+                            .addInterceptor(new BaseInterceptor())
+                            .addNetworkInterceptor(new NetworkBaseInterceptor());
+                    File cacheDir = FileUtil.getHttpImageCacheDir(AppApplication.get());
+                    if (cacheDir != null) {
+                        builder.cache(new Cache(cacheDir, AppConfig.HTTP_MAX_CACHE_SIZE));
+                    }
+                    okHttpClient = builder.build();
+                }
+            }
+        }
+        return okHttpClient;
+    }
 
     private void createRetrofit(@NonNull String baseUrl, boolean isJson) {
-        int timeOut = AppConfig.HTTP_TIME_OUT;
-        Cache cache = new Cache(FileUtil.getHttpImageCacheDir(AppApplication.get()),
-                AppConfig.HTTP_MAX_CACHE_SIZE);
-
-        OkHttpClient okHttpClient = new OkHttpClient.Builder()
-                .connectTimeout(timeOut, TimeUnit.MILLISECONDS)
-                .addInterceptor(new BaseInterceptor())
-                .addNetworkInterceptor(new NetworkBaseInterceptor())
-                .cache(cache)
-                .build();
-
         Retrofit.Builder builder = new Retrofit.Builder()
                 .baseUrl(baseUrl)
                 .addCallAdapterFactory(RxJavaCallAdapterFactory.create())
-                .client(okHttpClient);
+                .client(getOkHttpClient());
 
         if(isJson){
             builder.addConverterFactory(GsonConverterFactory.create());
@@ -73,16 +86,29 @@ public enum  AppRetrofit {
     }
 
     public Retrofit getRetrofit(@NonNull String baseUrl, @Nullable String token, boolean isJson) {
-        this.token = token;
-        String key = baseUrl + "-" + isJson;
-        if (!retrofitMap.containsKey(key)) {
-            createRetrofit(baseUrl, isJson);
+        HttpUrl url = HttpUrl.parse(baseUrl);
+        if (url != null) {
+            if (StringUtils.isBlank(token)) {
+                tokenMap.remove(url.host());
+            } else {
+                tokenMap.put(url.host(), token);
+            }
         }
-        return retrofitMap.get(key);
+        String key = baseUrl + "-" + isJson;
+        Retrofit retrofit = retrofitMap.get(key);
+        if (retrofit == null) {
+            createRetrofit(baseUrl, isJson);
+            retrofit = retrofitMap.get(key);
+        }
+        return retrofit;
     }
 
     public Retrofit getRetrofit(@NonNull String baseUrl, @Nullable String token) {
         return getRetrofit(baseUrl, token, true);
+    }
+
+    public void clearTokens() {
+        tokenMap.clear();
     }
 
     /**
@@ -105,14 +131,17 @@ public enum  AppRetrofit {
                         .build();
             }
 
-            //add access token
+            //add access token for the target host
+            String token = tokenMap.get(request.url().host());
             if(!StringUtils.isBlank(token)){
                 String auth = token.startsWith("Basic") ? token : "token " + token;
                 request = request.newBuilder()
                         .addHeader("Authorization", auth)
                         .build();
             }
-            Log.d(TAG, request.url().toString());
+            if (BuildConfig.DEBUG) {
+                Log.d(TAG, request.url().toString());
+            }
 
             //第二次请求，强制使用网络请求
             String forceNetWork = request.header("forceNetWork");
@@ -142,15 +171,7 @@ public enum  AppRetrofit {
             Request request = chain.request();
             Response originalResponse = chain.proceed(request);
 
-//            String serverCacheControl = originalResponse.header("Cache-Control");
             String requestCacheControl = request.cacheControl().toString();
-
-//            //若服务器端有缓存策略，则无需修改
-//            if (StringUtil.isBlank(serverCacheControl)) {
-//                return originalResponse;
-//            }
-//            //不设置缓存策略
-//            else
 
             //有forceNetWork时，强制更改缓存策略
             String forceNetWork = request.header("forceNetWork");
@@ -171,7 +192,6 @@ public enum  AppRetrofit {
                         .build();
                 return res;
             }
-
         }
     }
 

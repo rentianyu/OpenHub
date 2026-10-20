@@ -55,6 +55,7 @@ public class PrefUtils {
     public final static String LOGOUT = "logout";
     public final static String CODE_WRAP = "codeWrap";
     public final static String CUSTOM_TABS_ENABLE = "customTabsEnable";
+    public final static String OAUTH_STATE = "oauthState";
 
 
     public final static String POP_TIMES = "popTimes";
