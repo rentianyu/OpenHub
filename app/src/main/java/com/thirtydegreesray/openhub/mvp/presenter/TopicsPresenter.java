@@ -8,6 +8,7 @@ import com.thirtydegreesray.openhub.http.core.HttpResponse;
 import com.thirtydegreesray.openhub.mvp.contract.ITopicsContract;
 import com.thirtydegreesray.openhub.mvp.model.Topic;
 import com.thirtydegreesray.openhub.mvp.presenter.base.BasePresenter;
+import com.orhanobut.logger.Logger;
 
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
@@ -102,53 +103,82 @@ public class TopicsPresenter extends BasePresenter<ITopicsContract.View>
 
     private ArrayList<Topic> getTopTopics(Document doc) throws Exception{
         ArrayList<Topic> topTopics = new ArrayList<>();
-        Elements elements = doc.getElementsByClass("col-12 col-sm-6 col-md-4 mb-4");
+        // current github layout (2026): <li class="col-12 ... tmp-mb-4"><div class="topic-box">
+        Elements elements = doc.select("div.topic-box");
+        if(elements.isEmpty()){
+            // legacy layout fallback
+            elements = doc.getElementsByClass("col-12 col-sm-6 col-md-4 mb-4");
+        }
         for (Element element : elements) {
-            Element idElement = element.select("a").first();
-            Element imageElement = element.select("a > img").first();
-            Element titleElement = element.select("a > p").get(0);
-            Element descElement = element.select("a > p").get(1);
+            // isolate every card so one broken card never kills the whole page
+            try {
+                Element idElement = element.select("a[href]").first();
+                if(idElement == null) continue;
+                Elements paragraphs = element.select("p");
+                if(paragraphs.size() < 1) continue;
+                Element imageElement = element.select("img").first();
 
-            String id = idElement.attr("href");
-            id = id.substring(id.lastIndexOf("/") + 1);
-            String name = titleElement.textNodes().get(0).text();
-            String desc = descElement.textNodes().get(0).text();
-            String image = imageElement == null ? null : imageElement.attr("src");
+                String id = idElement.attr("href");
+                if(!id.contains("/topics/")) continue;
+                id = id.substring(id.lastIndexOf("/") + 1);
+                String name = paragraphs.get(0).text().trim();
+                String desc = paragraphs.size() > 1 ? paragraphs.get(1).text().trim() : "";
+                String image = imageElement == null ? null : imageElement.attr("src");
+                if(name.isEmpty()) continue;
 
-            Topic topic = new Topic()
-                    .setId(id)
-                    .setName(name)
-                    .setDesc(desc)
-                    .setImage(image);
-            topTopics.add(topic);
+                topTopics.add(new Topic()
+                        .setId(id)
+                        .setName(name)
+                        .setDesc(desc)
+                        .setImage(image));
+            } catch (Exception e) {
+                Logger.w("parse topic card error", e);
+            }
         }
         return topTopics;
     }
 
     private ArrayList<Topic> getFeaturedTopics(Document doc) throws Exception{
-        ArrayList<Topic> topTopics = new ArrayList<>();
-        Elements topElements = doc.getElementsByClass("py-4 border-bottom");
-        for (Element element : topElements) {
-            Element idElement = element.select("a").first();
-            Element imageElement = element.select("a > img").first();
-            Element titleElement = element.select("div > a > div > p").get(0);
-            Element descElement = element.select("div > a > div > p").get(1);
-
-            String id = idElement.attr("href");
-            id = id.substring(id.lastIndexOf("/") + 1);
-            String name = titleElement.textNodes().get(0).text();
-            String desc = descElement.textNodes().get(0).text();
-            String image = imageElement == null ? null : imageElement.attr("src");
-
-            Topic topic = new Topic()
-                    .setId(id)
-                    .setName(name)
-                    .setDesc(desc)
-                    .setImage(image);
-            topTopics.add(topic);
+        ArrayList<Topic> featuredTopics = new ArrayList<>();
+        // current github layout (2026): <div class="tmp-py-4 border-bottom ...">
+        Elements topElements = doc.select("div.tmp-py-4.border-bottom");
+        if(topElements.isEmpty()){
+            // legacy layout fallback
+            topElements = doc.getElementsByClass("py-4 border-bottom");
         }
-        return topTopics;
-    }
+        for (Element element : topElements) {
+            try {
+                // content link is the anchor that wraps the paragraphs
+                Element contentElement = null;
+                for (Element a : element.select("a[href]")) {
+                    if(a.select("p").size() > 0){
+                        contentElement = a;
+                        break;
+                    }
+                }
+                if(contentElement == null) continue;
+                Elements paragraphs = contentElement.select("p");
+                if(paragraphs.size() < 1) continue;
+                Element imageElement = element.select("img").first();
 
+                String id = contentElement.attr("href");
+                if(!id.contains("/topics/")) continue;
+                id = id.substring(id.lastIndexOf("/") + 1);
+                String name = paragraphs.get(0).text().trim();
+                String desc = paragraphs.size() > 1 ? paragraphs.get(1).text().trim() : "";
+                String image = imageElement == null ? null : imageElement.attr("src");
+                if(name.isEmpty()) continue;
+
+                featuredTopics.add(new Topic()
+                        .setId(id)
+                        .setName(name)
+                        .setDesc(desc)
+                        .setImage(image));
+            } catch (Exception e) {
+                Logger.w("parse featured topic error", e);
+            }
+        }
+        return featuredTopics;
+    }
 
 }

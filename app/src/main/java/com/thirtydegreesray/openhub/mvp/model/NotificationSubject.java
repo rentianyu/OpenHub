@@ -3,6 +3,7 @@
 package com.thirtydegreesray.openhub.mvp.model;
 
 import android.os.Parcel;
+import com.google.gson.annotations.JsonAdapter;
 import android.os.Parcelable;
 
 /**
@@ -11,8 +12,29 @@ import android.os.Parcelable;
 
 public class NotificationSubject implements Parcelable {
 
+    @JsonAdapter(TypeGsonAdapter.class)
     public enum Type{
-        Issue, PullRequest, Commit, Discussion, Release
+        Issue, PullRequest, Commit, Discussion, Release,
+        unknown;
+
+        /** tolerate unknown values from github instead of failing the whole payload */
+        public static class TypeGsonAdapter implements
+                com.google.gson.JsonDeserializer<Type>, com.google.gson.JsonSerializer<Type> {
+            @Override
+            public Type deserialize(com.google.gson.JsonElement json, java.lang.reflect.Type typeOfT,
+                    com.google.gson.JsonDeserializationContext context) {
+                try {
+                    return Type.valueOf(json.getAsString());
+                } catch (Exception e) {
+                    return Type.unknown;
+                }
+            }
+            @Override
+            public com.google.gson.JsonElement serialize(Type src, java.lang.reflect.Type typeOfT,
+                    com.google.gson.JsonSerializationContext context) {
+                return new com.google.gson.JsonPrimitive(src == null ? "" : src.name());
+            }
+        }
     }
 
     private String title;

@@ -136,13 +136,15 @@ public interface RepoService {
     @NonNull @GET("repos/{owner}/{repo}/branches")
     Observable<Response<ArrayList<Branch>>> getBranches(
             @Path("owner") String owner,
-            @Path("repo") String repo
+            @Path("repo") String repo,
+            @Query("per_page") int perPage
     );
 
     @NonNull @GET("repos/{owner}/{repo}/tags")
     Observable<Response<ArrayList<Branch>>> getTags(
             @Path("owner") String owner,
-            @Path("repo") String repo
+            @Path("repo") String repo,
+            @Query("per_page") int perPage
     );
 
     @NonNull @GET("repos/{owner}/{repo}/stargazers")

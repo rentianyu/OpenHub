@@ -102,7 +102,10 @@ public class ActivitiesAdapter extends BaseAdapter<ActivitiesAdapter.ViewHolder,
             EventPayload.RefType refType = model.getPayload().getRefType();
             String action = model.getPayload() != null ? model.getPayload().getAction() : null;
 
-            switch (model.getType()) {
+            // type may be null when github introduces a brand new event type
+            Event.EventType eventType = model.getType() == null
+                    ? Event.EventType.unknown : model.getType();
+            switch (eventType) {
                 case CommitCommentEvent:
                     actionStr = String.format(getString(R.string.created_comment_on_commit), fullName);
                     descSpan = new SpannableStringBuilder(model.getPayload().getComment().getBody());

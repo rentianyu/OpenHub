@@ -8,6 +8,7 @@ import com.thirtydegreesray.openhub.http.core.HttpResponse;
 import com.thirtydegreesray.openhub.mvp.contract.ICollectionsContract;
 import com.thirtydegreesray.openhub.mvp.model.Collection;
 import com.thirtydegreesray.openhub.mvp.presenter.base.BasePresenter;
+import com.orhanobut.logger.Logger;
 
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
@@ -103,42 +104,60 @@ public class CollectionsPresenter extends BasePresenter<ICollectionsContract.Vie
 
     private ArrayList<Collection> getTopCollections(Document doc){
         ArrayList<Collection> collections = new ArrayList<>();
-        Elements elements = doc.getElementsByClass(
-                "col-12 col-sm-6 col-md-4 mb-4");
+        // current github layout (2026): <a class="exploregrid-item" href="/collections/...">
+        Elements elements = doc.select("a.exploregrid-item");
+        if(elements.isEmpty()){
+            // legacy layout fallback
+            elements = doc.getElementsByClass("col-12 col-sm-6 col-md-4 mb-4").select("a");
+        }
         for (Element element : elements) {
-            Element hrefElement = element.select("a").first();
-            Element titleElement = element.select("a > p").first();
-            Element descElement = element.select("a > p").last();
-            String id = hrefElement.attr("href");
-            id = id.substring(id.lastIndexOf("/") + 1);
-            String title = titleElement.textNodes().get(0).toString();
-            String desc = descElement.textNodes().get(0).toString();
-
-//            List<TextNode> descTextNodes = descElement.textNodes();
-//            int descIndex = descTextNodes.size() == 0 ? 0 : descTextNodes.size() - 1;
-//            String desc = descTextNodes.get(descIndex).toString().trim();
-            Collection collection = new Collection(id, title, desc);
-            collections.add(collection);
+            // isolate every card so one broken card never kills the whole page
+            try {
+                String href = element.attr("href");
+                if(href == null || !href.contains("/collections/")) continue;
+                String id = href.substring(href.lastIndexOf("/") + 1);
+                Elements paragraphs = element.select("p");
+                String title = paragraphs.size() > 0 ? paragraphs.get(0).text().trim() : "";
+                String desc = paragraphs.size() > 1 ? paragraphs.get(1).text().trim() : "";
+                if(title.isEmpty()) continue;
+                collections.add(new Collection(id, title, desc));
+            } catch (Exception e) {
+                Logger.w("parse collection card error", e);
+            }
         }
         return collections;
     }
 
     private ArrayList<Collection> getBellowCollections(Document doc){
         ArrayList<Collection> collections = new ArrayList<>();
-        Elements elements = doc.getElementsByClass(
-                "d-flex border-bottom border-gray-light pb-4 mb-5");
+        // current github layout (2026): <article class="d-flex border-bottom ...">
+        //   <div class="col-10 ..."><h2><a href="/collections/xxx">title</a></h2> desc...</div>
+        Elements elements = doc.select("article.d-flex");
+        if(elements.isEmpty()){
+            // legacy layout fallback
+            elements = doc.getElementsByClass("d-flex border-bottom border-gray-light pb-4");
+        }
         for (Element element : elements) {
-            Element titleElement = element.select("div > h2 > a").first();
-            Element descElement = element.select("div").last();
-            String id = titleElement.attr("href");
-            id = id.substring(id.lastIndexOf("/") + 1);
-            String title = titleElement.textNodes().get(0).toString();
+            try {
+                Element hrefElement = element.select("h2 a, a").first();
+                if(hrefElement == null) continue;
+                String href = hrefElement.attr("href");
+                if(href == null || !href.contains("/collections/")) continue;
+                String id = href.substring(href.lastIndexOf("/") + 1);
+                String title = hrefElement.text().trim();
+                if(title.isEmpty()) continue;
 
-            List<TextNode> descTextNodes = descElement.textNodes();
-            int descIndex = descTextNodes.size() == 0 ? 0 : descTextNodes.size() - 1;
-            String desc = descTextNodes.get(descIndex).toString().trim();
-            Collection collection = new Collection(id, title, desc);
-            collections.add(collection);
+                StringBuilder desc = new StringBuilder();
+                Element descHost = element.select("div.col-10, div.col-11, div[class*=col-10]").first();
+                if(descHost != null){
+                    for (org.jsoup.nodes.TextNode textNode : descHost.textNodes()) {
+                        desc.append(textNode.getWholeText().trim());
+                    }
+                }
+                collections.add(new Collection(id, title, desc.toString().trim()));
+            } catch (Exception e) {
+                Logger.w("parse collection article error", e);
+            }
         }
         return collections;
     }

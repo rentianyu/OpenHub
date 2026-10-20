@@ -98,13 +98,13 @@ public class RepositoryPresenter extends BasePresenter<IRepositoryContract.View>
                             }
                         }
                 );
-        Observable<Response<ArrayList<Branch>>> observable = getRepoService().getBranches(owner, repoName)
+        Observable<Response<ArrayList<Branch>>> observable = getRepoService().getBranches(owner, repoName, 100)
                 .flatMap(new Func1<Response<ArrayList<Branch>>, Observable<Response<ArrayList<Branch>>>>() {
                     @Override
                     public Observable<Response<ArrayList<Branch>>> call(
                             Response<ArrayList<Branch>> arrayListResponse) {
                         branches = arrayListResponse.body();
-                        return getRepoService().getTags(owner, repoName);
+                        return getRepoService().getTags(owner, repoName, 100);
                     }
                 });
         generalRxHttpExecute(observable, httpProgressSubscriber);

@@ -5,6 +5,7 @@ package com.thirtydegreesray.openhub.mvp.model;
 import android.os.Parcel;
 import android.os.Parcelable;
 
+import com.google.gson.annotations.JsonAdapter;
 import com.google.gson.annotations.SerializedName;
 import com.thirtydegreesray.openhub.util.StringUtils;
 
@@ -16,8 +17,29 @@ import java.util.ArrayList;
 
 public class EventPayload implements Parcelable {
 
+    @JsonAdapter(RefTypeGsonAdapter.class)
     public enum RefType{
-        repository, branch, tag
+        repository, branch, tag,
+        unknown;
+
+        /** tolerate unknown values from github instead of failing the whole payload */
+        public static class RefTypeGsonAdapter implements
+                com.google.gson.JsonDeserializer<RefType>, com.google.gson.JsonSerializer<RefType> {
+            @Override
+            public RefType deserialize(com.google.gson.JsonElement json, java.lang.reflect.Type typeOfT,
+                    com.google.gson.JsonDeserializationContext context) {
+                try {
+                    return RefType.valueOf(json.getAsString());
+                } catch (Exception e) {
+                    return RefType.unknown;
+                }
+            }
+            @Override
+            public com.google.gson.JsonElement serialize(RefType src, java.lang.reflect.Type typeOfT,
+                    com.google.gson.JsonSerializationContext context) {
+                return new com.google.gson.JsonPrimitive(src == null ? "" : src.name());
+            }
+        }
     }
 
     public enum IssueEventActionType{

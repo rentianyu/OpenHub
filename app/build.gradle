@@ -143,6 +143,9 @@ dependencies {
     //Type-safe HTTP client for Android and Java by Square, Inc.
     implementation "com.squareup.retrofit2:retrofit:${RETROFIT_VERSION}"
     implementation "com.squareup.retrofit2:converter-gson:${RETROFIT_VERSION}"
+    // explicit gson >= 2.8 for @JsonAdapter (tolerates unknown github enum values);
+    // overrides the 2.7 pulled transitively by converter-gson
+    implementation "com.google.code.gson:gson:2.8.9"
     implementation "com.squareup.retrofit2:adapter-rxjava:${RETROFIT_VERSION}"
     implementation ("com.squareup.retrofit2:converter-simplexml:${RETROFIT_VERSION}"){
         exclude group: 'xpp3', module: 'xpp3'

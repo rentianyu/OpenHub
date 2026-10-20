@@ -387,27 +387,45 @@ public class RepositoriesPresenter extends BasePagerPresenter<IRepositoriesContr
     }
 
     private Repository parseCollectionsRepositoryData(Element element) throws Exception{
-        String fullName = element.select("div > h1 > a").attr("href");
-        fullName = fullName.substring(1);
-        String owner = fullName.substring(0, fullName.lastIndexOf("/"));
-        String repoName = fullName.substring(fullName.lastIndexOf("/") + 1);
-//        String ownerAvatar = element.select("div > div > a > img").attr("src");
-        String ownerAvatar = "";
-
-        Elements articleElements = element.getElementsByTag("div");
-        Element descElement = articleElements.get(articleElements.size() - 2);
-        StringBuilder desc = new StringBuilder("");
-        for(TextNode textNode : descElement.textNodes()){
-            desc.append(textNode.getWholeText());
+        // current github layout (2026): <article class="height-full border ...">
+        //   <h1 class="h3"><a href="/owner/repo">..</a></h1>
+        //   <div class="color-fg-muted mb-2 ws-normal">desc</div>
+        //   <div class="d-flex f6"><a href="..stargazers">..</a><a href="..forks">..</a>
+        //     <span itemprop="programmingLanguage">..</span>
+        Element linkElement = element.select("h1 a[href], h2 a[href]").first();
+        if(linkElement == null){
+            throw new Exception("repo link not found in collection article");
         }
+        String fullName = linkElement.attr("href");
+        if(fullName.startsWith("/")){
+            fullName = fullName.substring(1);
+        }
+        int slashIndex = fullName.lastIndexOf("/");
+        if(slashIndex <= 0 || slashIndex == fullName.length() - 1){
+            throw new Exception("invalid repo full name: " + fullName);
+        }
+        String owner = fullName.substring(0, slashIndex);
+        String repoName = fullName.substring(slashIndex + 1);
 
-        Element numElement = articleElements.last();
-        String starNumStr =  numElement.select("a").get(0).textNodes().get(1).toString();
-        String forkNumStr =  numElement.select("a").get(1).textNodes().get(1).toString();
+        String ownerAvatar = "";
+        String desc = "";
+        String starNumStr = "0";
+        String forkNumStr = "0";
         String language = "";
-        Elements languageElements = numElement.select("span > span > span");
-        if(languageElements.size() > 0){
-            language = numElement.select("span > span > span").get(1).textNodes().get(0).toString();
+
+        try{
+            Element descElement = element.select("div.color-fg-muted.mb-2, div.ws-normal").first();
+            if(descElement != null){
+                desc = descElement.text().trim();
+            }
+            starNumStr = parseTrendingNumber(element.select("a[href$='/stargazers']").first());
+            forkNumStr = parseTrendingNumber(element.select("a[href$='/forks']").first());
+            Element languageElement = element.select("[itemprop=programmingLanguage]").first();
+            if(languageElement != null){
+                language = languageElement.text().trim();
+            }
+        }catch (Exception e){
+            Logger.e("Collection repo meta parse error.", e);
         }
 
         Repository repo = new Repository();
@@ -418,9 +436,9 @@ public class RepositoriesPresenter extends BasePagerPresenter<IRepositoriesContr
         user.setAvatarUrl(ownerAvatar);
         repo.setOwner(user);
 
-        repo.setDescription(desc.toString());
-        repo.setStargazersCount(Integer.parseInt(starNumStr.replaceAll(" ", "")));
-        repo.setForksCount(Integer.parseInt(forkNumStr.replaceAll(" ", "")));
+        repo.setDescription(desc);
+        repo.setStargazersCount(parseIntSafe(starNumStr));
+        repo.setForksCount(parseIntSafe(forkNumStr));
         repo.setLanguage(language);
 
         return repo;
@@ -533,8 +551,8 @@ public class RepositoriesPresenter extends BasePagerPresenter<IRepositoriesContr
                 if(languageElement != null && !StringUtils.isBlank(languageElement.text())){
                     language = languageElement.text().trim();
                 }
-                starNumStr = parseTrendingNumber(numElement.select("a[href$=/stargazers]").first());
-                forkNumStr = parseTrendingNumber(numElement.select("a[href$=/forks]").first());
+                starNumStr = parseTrendingNumber(numElement.select("a[href$='/stargazers']").first());
+                forkNumStr = parseTrendingNumber(numElement.select("a[href$='/forks']").first());
                 Element periodElement = numElement.select("span.d-inline-block.float-sm-right").first();
                 if(periodElement != null){
                     periodNumStr = parseTrendingNumber(periodElement);

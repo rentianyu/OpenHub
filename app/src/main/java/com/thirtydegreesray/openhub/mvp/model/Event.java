@@ -6,6 +6,7 @@ import android.os.Parcel;
 import android.os.Parcelable;
 
 import com.google.gson.annotations.SerializedName;
+import com.google.gson.annotations.JsonAdapter;
 
 import java.util.Date;
 
@@ -15,6 +16,7 @@ import java.util.Date;
 
 public class Event implements Parcelable {
 
+    @JsonAdapter(EventTypeGsonAdapter.class)
     public enum EventType{
 
         CommitCommentEvent,
@@ -104,6 +106,26 @@ public class Event implements Parcelable {
         ForkApplyEvent,
         GistEvent,
 
+        unknown;
+
+        /** tolerate unknown values from github instead of failing the whole payload */
+        public static class EventTypeGsonAdapter implements
+                com.google.gson.JsonDeserializer<EventType>, com.google.gson.JsonSerializer<EventType> {
+            @Override
+            public EventType deserialize(com.google.gson.JsonElement json, java.lang.reflect.Type typeOfT,
+                    com.google.gson.JsonDeserializationContext context) {
+                try {
+                    return EventType.valueOf(json.getAsString());
+                } catch (Exception e) {
+                    return EventType.unknown;
+                }
+            }
+            @Override
+            public com.google.gson.JsonElement serialize(EventType src, java.lang.reflect.Type typeOfT,
+                    com.google.gson.JsonSerializationContext context) {
+                return new com.google.gson.JsonPrimitive(src == null ? "" : src.name());
+            }
+        }
     }
 
     private String id;
