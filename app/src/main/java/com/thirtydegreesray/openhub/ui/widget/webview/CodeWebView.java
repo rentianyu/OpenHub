@@ -82,8 +82,9 @@ public class CodeWebView extends WebView {
         }
         WebSettings settings = getSettings();
         settings.setJavaScriptEnabled(true);
-        settings.setAppCachePath(getContext().getCacheDir().getPath());
-        settings.setAppCacheEnabled(true);
+        //AppCache api (setAppCachePath/setAppCacheEnabled) was removed in Android 13 (api 33),
+        //http cache is still used via setCacheMode below
+        settings.setDomStorageEnabled(true);
         settings.setCacheMode(WebSettings.LOAD_CACHE_ELSE_NETWORK);
         settings.setDefaultTextEncodingName("utf-8");
         boolean isLoadImageEnable = PrefUtils.isLoadImageEnable();
