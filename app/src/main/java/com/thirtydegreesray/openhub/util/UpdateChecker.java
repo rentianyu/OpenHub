@@ -13,7 +13,6 @@ import com.thirtydegreesray.openhub.BuildConfig;
 import java.io.IOException;
 
 import okhttp3.Call;
-import okhttp3.Callback;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.Response;
@@ -65,7 +64,7 @@ public final class UpdateChecker {
                 .header("Accept", "application/vnd.github+json")
                 .header("User-Agent", "OpenHub-Android/" + BuildConfig.VERSION_NAME)
                 .build();
-        client.newCall(request).enqueue(new Callback() {
+        client.newCall(request).enqueue(new okhttp3.Callback() {
             @Override
             public void onFailure(Call call, IOException e) {
                 post(callback, null, e.getMessage() == null ? "network error" : e.getMessage());
