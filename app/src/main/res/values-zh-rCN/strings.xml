@@ -82,7 +82,7 @@
     <string name="no_file">没有文件</string>
     <string name="developing">开发中</string>
     <string name="no_data">没有数据</string>
-    <string name="author">作者</string>
+    <string name="author">原作者</string>
     <string name="email">邮件</string>
     <string name="source_code">源代码</string>
     <string name="send_email">发送邮件</string>
@@ -376,4 +376,12 @@
     <string name="add_account">添加账户</string>
     <string name="delete_label_warning">确认要删除这个标签？</string>
 
+    <string name="fork_developer">Fork 开发者</string>
+    <string name="check_update">检查更新</string>
+    <string name="checking_update">正在检查更新…</string>
+    <string name="update_available_title">发现新版本</string>
+    <string name="update_available_message">最新版本：%1$s\n当前版本：%2$s</string>
+    <string name="update_download">去下载</string>
+    <string name="update_latest_version">已是最新版本。</string>
+    <string name="update_check_failed">检查失败：%1$s</string>
 </resources>

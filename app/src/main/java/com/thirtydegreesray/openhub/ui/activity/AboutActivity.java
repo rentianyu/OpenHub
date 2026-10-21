@@ -8,6 +8,7 @@ import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 
+import com.afollestad.materialdialogs.MaterialDialog;
 import com.danielstone.materialaboutlibrary.MaterialAboutActivity;
 import com.danielstone.materialaboutlibrary.items.MaterialAboutActionItem;
 import com.danielstone.materialaboutlibrary.items.MaterialAboutItemOnClickAction;
@@ -19,6 +20,9 @@ import com.thirtydegreesray.openhub.R;
 import com.thirtydegreesray.openhub.util.AppOpener;
 import com.thirtydegreesray.openhub.util.AppUtils;
 import com.thirtydegreesray.openhub.util.ThemeHelper;
+import com.thirtydegreesray.openhub.util.UpdateChecker;
+
+import es.dmoral.toasty.Toasty;
 
 /**
  * Created by ThirtyDegreesRay on 2017/8/29.
@@ -47,9 +51,12 @@ public class AboutActivity extends MaterialAboutActivity {
         buildApp(appBuilder, context);
         MaterialAboutCard.Builder authorBuilder = new MaterialAboutCard.Builder();
         buildAuthor(authorBuilder, context);
+        MaterialAboutCard.Builder forkBuilder = new MaterialAboutCard.Builder();
+        buildForkDeveloper(forkBuilder, context);
         MaterialAboutCard.Builder shareBuilder = new MaterialAboutCard.Builder();
         buildShare(shareBuilder, context);
-        return new MaterialAboutList(appBuilder.build(), authorBuilder.build(), shareBuilder.build());
+        return new MaterialAboutList(appBuilder.build(), authorBuilder.build(),
+                forkBuilder.build(), shareBuilder.build());
     }
 
     @Nullable
@@ -76,10 +83,112 @@ public class AboutActivity extends MaterialAboutActivity {
                 .setOnClickAction(new MaterialAboutItemOnClickAction() {
                     @Override
                     public void onClick() {
-                        RepositoryActivity.show(context, getString(R.string.author_login_id), getString(R.string.app_github_name));
+                        RepositoryActivity.show(context, getString(R.string.fork_developer_login_id), getString(R.string.app_github_name));
                     }
                 })
                 .build());
+        appBuilder.addItem(new MaterialAboutActionItem.Builder()
+                .text(R.string.check_update)
+                .icon(R.drawable.ic_refresh)
+                .setOnClickAction(new MaterialAboutItemOnClickAction() {
+                    @Override
+                    public void onClick() {
+                        checkUpdate();
+                    }
+                })
+                .build());
+    }
+
+    private void buildForkDeveloper(MaterialAboutCard.Builder forkBuilder, final Context context){
+        forkBuilder.title(R.string.fork_developer);
+        forkBuilder.addItem(new MaterialAboutActionItem.Builder()
+                .text(R.string.fork_developer_name)
+                .subText(R.string.fork_developer_login_id)
+                .icon(R.drawable.ic_menu_person)
+                .setOnClickAction(new MaterialAboutItemOnClickAction() {
+                    @Override
+                    public void onClick() {
+                        ProfileActivity.show(AboutActivity.this, getString(R.string.fork_developer_login_id),
+                                getString(R.string.fork_developer_avatar_url));
+                    }
+                })
+                .build());
+        forkBuilder.addItem(new MaterialAboutActionItem.Builder()
+                .text(R.string.fork_repository)
+                .subText(R.string.source_code_wishes)
+                .icon(R.drawable.ic_code)
+                .setOnClickAction(new MaterialAboutItemOnClickAction() {
+                    @Override
+                    public void onClick() {
+                        RepositoryActivity.show(context, getString(R.string.fork_developer_login_id),
+                                getString(R.string.app_github_name));
+                    }
+                })
+                .build());
+        forkBuilder.addItem(new MaterialAboutActionItem.Builder()
+                .text(R.string.follow_on_github)
+                .icon(R.drawable.ic_github)
+                .setOnClickAction(new MaterialAboutItemOnClickAction() {
+                    @Override
+                    public void onClick() {
+                        ProfileActivity.show(AboutActivity.this, getString(R.string.fork_developer_login_id),
+                                getString(R.string.fork_developer_avatar_url));
+                    }
+                })
+                .build());
+        forkBuilder.addItem(new MaterialAboutActionItem.Builder()
+                .text(R.string.email)
+                .subText(R.string.fork_developer_email)
+                .icon(R.drawable.ic_mail)
+                .setOnClickAction(new MaterialAboutItemOnClickAction() {
+                    @Override
+                    public void onClick() {
+                        AppOpener.launchEmail(context, getString(R.string.fork_developer_email));
+                    }
+                })
+                .setOnLongClickAction(new MaterialAboutItemOnClickAction() {
+                    @Override
+                    public void onClick() {
+                        AppUtils.copyToClipboard(context, getString(R.string.fork_developer_email));
+                    }
+                })
+                .build());
+    }
+
+    private void checkUpdate(){
+        if(!isAlive) return;
+        Toasty.info(this, getString(R.string.checking_update), android.widget.Toast.LENGTH_SHORT).show();
+        UpdateChecker.check(new UpdateChecker.Callback() {
+            @Override
+            public void onResult(UpdateChecker.Result result, String error) {
+                if(!isAlive) return;
+                if(error != null || result == null){
+                    Toasty.error(AboutActivity.this,
+                            getString(R.string.update_check_failed, error == null ? "" : error),
+                            android.widget.Toast.LENGTH_LONG).show();
+                    return;
+                }
+                if(result.hasUpdate){
+                    new MaterialDialog.Builder(AboutActivity.this)
+                            .title(getString(R.string.update_available_title) + " " + result.latestVersion)
+                            .content(getString(R.string.update_available_message,
+                                    result.latestVersion, BuildConfig.VERSION_NAME))
+                            .positiveText(R.string.update_download)
+                            .negativeText(R.string.cancel)
+                            .onPositive(new MaterialDialog.SingleButtonCallback() {
+                                @Override
+                                public void onClick(@NonNull MaterialDialog dialog, @NonNull com.afollestad.materialdialogs.DialogAction which) {
+                                    AppOpener.openInCustomTabsOrBrowser(AboutActivity.this,
+                                            result.downloadUrl);
+                                }
+                            })
+                            .show();
+                } else {
+                    Toasty.success(AboutActivity.this, getString(R.string.update_latest_version),
+                            android.widget.Toast.LENGTH_SHORT).show();
+                }
+            }
+        });
     }
 
     private void buildAuthor(MaterialAboutCard.Builder appBuilder, final Context context){
