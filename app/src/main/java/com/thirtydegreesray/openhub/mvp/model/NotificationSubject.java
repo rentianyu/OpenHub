@@ -16,8 +16,9 @@ public class NotificationSubject implements Parcelable {
     public enum Type{
         Issue, PullRequest, Commit, Discussion, Release,
         unknown;
+    }
 
-        /** tolerate unknown values from github instead of failing the whole payload */
+    /** tolerate unknown values from github instead of failing the whole payload */
         public static class TypeGsonAdapter implements
                 com.google.gson.JsonDeserializer<Type>, com.google.gson.JsonSerializer<Type> {
             @Override
@@ -35,7 +36,7 @@ public class NotificationSubject implements Parcelable {
                 return new com.google.gson.JsonPrimitive(src == null ? "" : src.name());
             }
         }
-    }
+
 
     private String title;
     private String url;

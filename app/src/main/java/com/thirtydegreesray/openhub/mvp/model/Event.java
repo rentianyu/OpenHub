@@ -107,8 +107,9 @@ public class Event implements Parcelable {
         GistEvent,
 
         unknown;
+    }
 
-        /** tolerate unknown values from github instead of failing the whole payload */
+    /** tolerate unknown values from github instead of failing the whole payload */
         public static class EventTypeGsonAdapter implements
                 com.google.gson.JsonDeserializer<EventType>, com.google.gson.JsonSerializer<EventType> {
             @Override
@@ -126,7 +127,7 @@ public class Event implements Parcelable {
                 return new com.google.gson.JsonPrimitive(src == null ? "" : src.name());
             }
         }
-    }
+
 
     private String id;
     private EventType type;

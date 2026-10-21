@@ -21,8 +21,9 @@ public class EventPayload implements Parcelable {
     public enum RefType{
         repository, branch, tag,
         unknown;
+    }
 
-        /** tolerate unknown values from github instead of failing the whole payload */
+    /** tolerate unknown values from github instead of failing the whole payload */
         public static class RefTypeGsonAdapter implements
                 com.google.gson.JsonDeserializer<RefType>, com.google.gson.JsonSerializer<RefType> {
             @Override
@@ -40,7 +41,7 @@ public class EventPayload implements Parcelable {
                 return new com.google.gson.JsonPrimitive(src == null ? "" : src.name());
             }
         }
-    }
+
 
     public enum IssueEventActionType{
         assigned, unassigned, labeled, unlabeled, opened,
