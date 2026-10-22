@@ -28,7 +28,7 @@
             app:collapsedTitleGravity="start"
             app:expandedTitleGravity="top"
             app:expandedTitleMarginStart="@dimen/spacing_x_large"
-            app:expandedTitleMarginTop="60dp"
+            app:expandedTitleMarginTop="26dp"
             app:expandedTitleTextAppearance="@style/Toolbar.Expand.TitleText"
             android:paddingTop="0dp">
 
@@ -54,8 +54,8 @@
                 android:layout_gravity="start|top"
                 android:paddingStart="@dimen/spacing_normal"
                 android:paddingEnd="@dimen/spacing_normal"
-                android:paddingBottom="@dimen/spacing_normal"
-                android:layout_marginTop="86dp">
+                android:paddingBottom="@dimen/spacing_mini"
+                android:layout_marginTop="78dp">
 
                 <TextView
                     android:id="@+id/desc"
@@ -64,7 +64,7 @@
                     android:textSize="@dimen/text_small"
                     android:textColor="?title_color"
                     android:layout_marginStart="@dimen/spacing_normal"
-                    android:layout_marginTop="@dimen/spacing_x_large"
+                    android:layout_marginTop="20dp"
                     android:maxLines="4"
                     android:ellipsize="end"/>
 
