@@ -33,6 +33,7 @@ import com.thirtydegreesray.openhub.mvp.model.graphql.GraphqlQueries;
 import com.thirtydegreesray.openhub.mvp.model.graphql.GraphqlRepo;
 import com.thirtydegreesray.openhub.mvp.model.graphql.GraphqlRequest;
 import com.thirtydegreesray.openhub.mvp.model.graphql.GraphqlResponse;
+import com.thirtydegreesray.openhub.mvp.model.graphql.MutationData;
 import com.thirtydegreesray.openhub.mvp.model.graphql.StarListItemsData;
 import com.thirtydegreesray.openhub.mvp.model.graphql.StarListsData;
 import com.thirtydegreesray.openhub.mvp.presenter.base.BasePagerPresenter;
