@@ -83,6 +83,7 @@ public class RepositoryActivity extends PagerActivity<RepositoryPresenter>
     @BindView(R.id.loader) ProgressBar loader;
     @BindView(R.id.desc) TextView desc;
     @BindView(R.id.info) TextView info;
+    @BindView(R.id.header_title) TextView headerTitle;
 
     @Override
     protected void setupActivityComponent(AppComponent appComponent) {
@@ -128,7 +129,8 @@ public class RepositoryActivity extends PagerActivity<RepositoryPresenter>
         toolbar.setTitleTextAppearance(getActivity(), R.style.Toolbar_TitleText);
         toolbar.setSubtitleTextAppearance(getActivity(), R.style.Toolbar_Subtitle);
         setToolbarBackEnable();
-        setToolbarTitle(mPresenter.getRepoName());
+        //大标题改由 header_title 自己绘制，避免 toolbar 与标题重复
+        setToolbarTitle("");
     }
 
     @Override
@@ -199,6 +201,7 @@ public class RepositoryActivity extends PagerActivity<RepositoryPresenter>
     @Override
     public void showRepo(Repository repo) {
 //        setToolbarTitle(repo.getFullName(), repo.getDefaultBranch());
+        headerTitle.setText(repo.getName());
         desc.setText(repo.getDescription());
         String language = StringUtils.isBlank(repo.getLanguage()) ?
                 getString(R.string.unknown) : repo.getLanguage();

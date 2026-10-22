@@ -15,54 +15,66 @@
         android:id="@+id/app_bar"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:fitsSystemWindows="true"
         android:theme="?appbar_theme">
 
         <android.support.design.widget.CollapsingToolbarLayout
             android:id="@+id/toolbar_layout"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:fitsSystemWindows="true"
             app:contentScrim="?attr/colorPrimary"
-            app:layout_scrollFlags="scroll|exitUntilCollapsed|snap"
-            android:minHeight="?attr/actionBarSize"
-            app:collapsedTitleGravity="start"
-            app:expandedTitleGravity="top"
-            app:expandedTitleMarginStart="@dimen/spacing_x_large"
-            app:expandedTitleMarginTop="26dp"
-            app:expandedTitleTextAppearance="@style/Toolbar.Expand.TitleText"
-            android:paddingTop="0dp">
+            app:layout_scrollFlags="scroll|snap"
+            app:titleEnabled="false">
 
             <android.support.v7.widget.AppCompatImageView
                 android:id="@+id/user_avatar_bg"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
+                android:fitsSystemWindows="true"
+                android:scaleType="centerCrop"
                 app:layout_collapseMode="parallax"
-                app:layout_collapseParallaxMultiplier="0.5"
-                android:scaleType="centerCrop"/>
+                app:layout_collapseParallaxMultiplier="0.5"/>
 
             <android.support.v7.widget.AppCompatImageView
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
-                app:layout_collapseMode="parallax"
-                android:background="?color_primary_blur"/>
+                android:background="?color_primary_blur"
+                android:fitsSystemWindows="true"/>
 
-            <RelativeLayout
+            <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_gravity="start|top"
-                android:paddingStart="@dimen/spacing_normal"
-                android:paddingEnd="@dimen/spacing_normal"
-                android:paddingBottom="0dp"
-                android:layout_marginTop="78dp">
+                android:orientation="vertical"
+                android:paddingBottom="@dimen/spacing_normal">
+
+                <android.support.v7.widget.Toolbar
+                    android:id="@+id/toolbar"
+                    android:layout_width="match_parent"
+                    android:layout_height="?attr/actionBarSize"
+                    app:popupTheme="?popup_theme"/>
+
+                <TextView
+                    android:id="@+id/header_title"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:paddingStart="@dimen/spacing_x_large"
+                    android:paddingEnd="@dimen/spacing_x_large"
+                    android:textColor="?title_color"
+                    android:textSize="22sp"
+                    android:textStyle="bold"
+                    android:maxLines="2"
+                    android:ellipsize="end"/>
 
                 <TextView
                     android:id="@+id/desc"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:textSize="@dimen/text_small"
+                    android:layout_marginStart="@dimen/spacing_x_large"
+                    android:layout_marginEnd="@dimen/spacing_x_large"
+                    android:layout_marginTop="@dimen/spacing_mini"
                     android:textColor="?title_color"
-                    android:layout_marginStart="@dimen/spacing_normal"
-                    android:layout_marginTop="20dp"
+                    android:textSize="@dimen/text_small"
                     android:maxLines="4"
                     android:ellipsize="end"/>
 
@@ -70,21 +82,12 @@
                     android:id="@+id/info"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:gravity="center_vertical"
-                    android:textSize="@dimen/text_small"
+                    android:layout_marginStart="@dimen/spacing_x_large"
+                    android:layout_marginEnd="@dimen/spacing_x_large"
+                    android:layout_marginTop="2dp"
                     android:textColor="?title_color"
-                    android:layout_below="@+id/desc"
-                    android:layout_marginStart="@dimen/spacing_normal"
-                    android:transitionName="issueTitle"/>
-
-            </RelativeLayout>
-
-            <android.support.v7.widget.Toolbar
-                android:id="@+id/toolbar"
-                android:layout_width="match_parent"
-                android:layout_height="?attr/actionBarSize"
-                app:layout_collapseMode="pin"
-                app:popupTheme="?popup_theme"/>
+                    android:textSize="@dimen/text_small"/>
+            </LinearLayout>
 
         </android.support.design.widget.CollapsingToolbarLayout>
 
@@ -93,6 +96,7 @@
             android:layout_width="match_parent"
             android:layout_height="48dp"
             android:visibility="visible"
+            app:layout_scrollFlags="scroll|snap"
             app:tabGravity="fill"
             app:tabMode="fixed"
             app:tabTextAppearance="@style/TextAppearance.Design.Tab"
