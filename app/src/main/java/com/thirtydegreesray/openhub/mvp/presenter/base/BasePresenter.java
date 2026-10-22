@@ -21,6 +21,7 @@ import com.thirtydegreesray.openhub.dao.AuthUser;
 import com.thirtydegreesray.openhub.dao.DaoSession;
 import com.thirtydegreesray.openhub.http.CommitService;
 import com.thirtydegreesray.openhub.http.GitHubWebPageService;
+import com.thirtydegreesray.openhub.http.GraphqlService;
 import com.thirtydegreesray.openhub.http.IssueService;
 import com.thirtydegreesray.openhub.http.LoginService;
 import com.thirtydegreesray.openhub.http.NotificationsService;
@@ -161,6 +162,10 @@ public abstract class BasePresenter<V extends IBaseContract.View> implements IBa
 
     protected RepoService getRepoService() {
         return getServices(RepoService.class);
+    }
+
+    protected GraphqlService getGraphqlService() {
+        return getServices(GraphqlService.class);
     }
 
     protected SearchService getSearchService() {

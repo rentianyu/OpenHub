@@ -28,12 +28,14 @@ import com.thirtydegreesray.openhub.inject.module.ActivityModule;
 import com.thirtydegreesray.openhub.mvp.contract.IRepositoryContract;
 import com.thirtydegreesray.openhub.mvp.model.Branch;
 import com.thirtydegreesray.openhub.mvp.model.Repository;
+import com.thirtydegreesray.openhub.mvp.model.StarList;
 import com.thirtydegreesray.openhub.mvp.presenter.RepositoryPresenter;
 import com.thirtydegreesray.openhub.ui.activity.base.PagerActivity;
 import com.thirtydegreesray.openhub.ui.adapter.BranchesAdapter;
 import com.thirtydegreesray.openhub.ui.adapter.base.BaseViewHolder;
 import com.thirtydegreesray.openhub.ui.adapter.base.FragmentPagerModel;
 import com.thirtydegreesray.openhub.ui.fragment.ActivityFragment;
+import com.thirtydegreesray.openhub.ui.widget.RepoStarListsDialog;
 import com.thirtydegreesray.openhub.ui.fragment.CommitsFragment;
 import com.thirtydegreesray.openhub.ui.fragment.RepoFilesFragment;
 import com.thirtydegreesray.openhub.ui.fragment.RepoInfoFragment;
@@ -114,6 +116,7 @@ public class RepositoryActivity extends PagerActivity<RepositoryPresenter>
             bookmark.setTitle(mPresenter.isBookmarked() ?
                     getString(R.string.remove_bookmark) : getString(R.string.bookmark));
             menu.findItem(R.id.action_wiki).setVisible(mPresenter.getRepository().isHasWiki());
+            menu.findItem(R.id.action_star_lists).setVisible(mPresenter.isStarred());
         }
         return true;
     }
@@ -178,6 +181,9 @@ public class RepositoryActivity extends PagerActivity<RepositoryPresenter>
                 invalidateOptionsMenu();
                 showSuccessToast(mPresenter.isBookmarked() ?
                         getString(R.string.bookmark_saved) : getString(R.string.bookmark_removed));
+                return true;
+            case R.id.action_star_lists:
+                mPresenter.loadRepoStarLists();
                 return true;
         }
         return super.onOptionsItemSelected(item);
@@ -358,5 +364,15 @@ public class RepositoryActivity extends PagerActivity<RepositoryPresenter>
             return 3;
         }else
             return -1;
+    }
+
+    @Override
+    public void showRepoStarLists(ArrayList<StarList> starLists, ArrayList<String> selectedIds) {
+        RepoStarListsDialog.show(this, starLists, selectedIds, new RepoStarListsDialog.OnConfirmListener() {
+            @Override
+            public void onConfirm(ArrayList<String> listIds) {
+                mPresenter.updateRepoStarLists(listIds);
+            }
+        });
     }
 }

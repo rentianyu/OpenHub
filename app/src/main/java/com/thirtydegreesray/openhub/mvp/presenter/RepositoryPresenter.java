@@ -2,6 +2,9 @@
 
 package com.thirtydegreesray.openhub.mvp.presenter;
 
+import android.support.annotation.NonNull;
+import android.support.annotation.Nullable;
+
 import com.thirtydegreesray.dataautoaccess.annotation.AutoAccess;
 import com.thirtydegreesray.openhub.AppData;
 import com.thirtydegreesray.openhub.R;
@@ -17,12 +20,24 @@ import com.thirtydegreesray.openhub.http.core.HttpResponse;
 import com.thirtydegreesray.openhub.mvp.contract.IRepositoryContract;
 import com.thirtydegreesray.openhub.mvp.model.Branch;
 import com.thirtydegreesray.openhub.mvp.model.Repository;
+import com.thirtydegreesray.openhub.mvp.model.StarList;
+import com.thirtydegreesray.openhub.mvp.model.graphql.GraphqlQueries;
+import com.thirtydegreesray.openhub.mvp.model.graphql.GraphqlRepo;
+import com.thirtydegreesray.openhub.mvp.model.graphql.GraphqlRequest;
+import com.thirtydegreesray.openhub.mvp.model.graphql.GraphqlResponse;
+import com.thirtydegreesray.openhub.mvp.model.graphql.MutationData;
+import com.thirtydegreesray.openhub.mvp.model.graphql.StarListItemsData;
+import com.thirtydegreesray.openhub.mvp.model.graphql.StarListsData;
 import com.thirtydegreesray.openhub.mvp.presenter.base.BasePresenter;
 import com.thirtydegreesray.openhub.ui.activity.RepositoryActivity;
+import com.thirtydegreesray.openhub.util.StarListCache;
 import com.thirtydegreesray.openhub.util.StarWishesHelper;
+import com.thirtydegreesray.openhub.util.StringUtils;
 
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.UUID;
 
 import javax.inject.Inject;
@@ -362,6 +377,163 @@ public class RepositoryPresenter extends BasePresenter<IRepositoryContract.View>
             }
         });
         isTraceSaved = true;
+    }
+
+    //========================== 星标目录（GitHub Lists） ==========================
+
+    @Override
+    public void loadRepoStarLists() {
+        final StarListCache cache = StarListCache.getInstance();
+        if (cache.isValid() && cache.hasStarLists() && cache.isMembershipLoaded()) {
+            if (mView != null) {
+                mView.showRepoStarLists(cache.getStarLists(), buildRepoListIds(cache));
+            }
+            return;
+        }
+        if (cache.hasStarLists()) {
+            cache.startMemberships();
+            loadRepoMembership(cache, 0);
+            return;
+        }
+        generalRxHttpExecute(
+                new IObservableCreator<GraphqlResponse<StarListsData>>() {
+                    @Nullable
+                    @Override
+                    public Observable<Response<GraphqlResponse<StarListsData>>> createObservable(boolean forceNetWork) {
+                        return getGraphqlService()
+                                .getStarLists(new GraphqlRequest(GraphqlQueries.QUERY_STAR_LISTS));
+                    }
+                },
+                new HttpObserver<GraphqlResponse<StarListsData>>() {
+                    @Override
+                    public void onError(@NonNull Throwable error) {
+                        if (mView != null) {
+                            mView.showErrorToast(getErrorTip(error));
+                        }
+                    }
+
+                    @Override
+                    public void onSuccess(@NonNull HttpResponse<GraphqlResponse<StarListsData>> response) {
+                        GraphqlResponse<StarListsData> body = response.body();
+                        if (body == null || body.hasErrors() || body.getData() == null
+                                || body.getData().getViewer() == null
+                                || body.getData().getViewer().getLists() == null) {
+                            if (mView != null) {
+                                mView.showErrorToast(body == null ? "" : body.getErrorMessages());
+                            }
+                            return;
+                        }
+                        ArrayList<StarList> lists = body.getData().getViewer().getLists().getNodes();
+                        if (lists == null) {
+                            lists = new ArrayList<>();
+                        }
+                        cache.setStarLists(lists);
+                        cache.startMemberships();
+                        loadRepoMembership(cache, 0);
+                    }
+                }, false);
+    }
+
+    private ArrayList<String> buildRepoListIds(StarListCache cache) {
+        ArrayList<String> listIds = new ArrayList<>();
+        if (repository == null || repository.getFullName() == null) {
+            return listIds;
+        }
+        ArrayList<StarList> lists = cache.getMember(repository.getFullName());
+        if (lists != null) {
+            for (StarList list : lists) {
+                listIds.add(list.getId());
+            }
+        }
+        return listIds;
+    }
+
+    private void loadRepoMembership(final StarListCache cache, final int index) {
+        final ArrayList<StarList> lists = cache.getStarLists();
+        if (lists == null || index >= lists.size()) {
+            if (mView != null) {
+                mView.showRepoStarLists(lists, buildRepoListIds(cache));
+            }
+            return;
+        }
+        final StarList starList = lists.get(index);
+        generalRxHttpExecute(
+                new IObservableCreator<GraphqlResponse<StarListItemsData>>() {
+                    @Nullable
+                    @Override
+                    public Observable<Response<GraphqlResponse<StarListItemsData>>> createObservable(boolean forceNetWork) {
+                        return getGraphqlService().getStarListItems(
+                                GraphqlRequest.withVariable(GraphqlQueries.QUERY_STAR_LIST_MEMBERS,
+                                        "id", starList.getId()));
+                    }
+                },
+                new HttpObserver<GraphqlResponse<StarListItemsData>>() {
+                    @Override
+                    public void onError(@NonNull Throwable error) {
+                        loadRepoMembership(cache, index + 1);
+                    }
+
+                    @Override
+                    public void onSuccess(@NonNull HttpResponse<GraphqlResponse<StarListItemsData>> response) {
+                        GraphqlResponse<StarListItemsData> body = response.body();
+                        if (body != null && !body.hasErrors() && body.getData() != null
+                                && body.getData().getNode() != null
+                                && body.getData().getNode().getItems() != null) {
+                            ArrayList<GraphqlRepo> nodes = body.getData().getNode().getItems().getNodes();
+                            if (nodes != null) {
+                                for (GraphqlRepo node : nodes) {
+                                    cache.addMember(node.getNameWithOwner(), starList);
+                                }
+                            }
+                        }
+                        loadRepoMembership(cache, index + 1);
+                    }
+                }, false);
+    }
+
+    @Override
+    public void updateRepoStarLists(ArrayList<String> listIds) {
+        if (repository == null || StringUtils.isBlank(repository.getNodeId())) {
+            if (mView != null) {
+                mView.showErrorToast(getString(R.string.star_list_missing_repo_id));
+            }
+            return;
+        }
+        final Map<String, Object> variables = new HashMap<>();
+        variables.put("itemId", repository.getNodeId());
+        variables.put("listIds", listIds == null ? new ArrayList<String>() : listIds);
+        generalRxHttpExecute(
+                new IObservableCreator<GraphqlResponse<MutationData>>() {
+                    @Nullable
+                    @Override
+                    public Observable<Response<GraphqlResponse<MutationData>>> createObservable(boolean forceNetWork) {
+                        return getGraphqlService().postMutation(
+                                new GraphqlRequest(GraphqlQueries.MUTATION_UPDATE_REPO_LISTS, variables));
+                    }
+                },
+                new HttpObserver<GraphqlResponse<MutationData>>() {
+                    @Override
+                    public void onError(@NonNull Throwable error) {
+                        if (mView != null) {
+                            mView.showErrorToast(getErrorTip(error));
+                        }
+                    }
+
+                    @Override
+                    public void onSuccess(@NonNull HttpResponse<GraphqlResponse<MutationData>> response) {
+                        GraphqlResponse<MutationData> body = response.body();
+                        if (body != null && body.hasErrors()) {
+                            if (mView != null) {
+                                mView.showErrorToast(body.getErrorMessages());
+                            }
+                            return;
+                        }
+                        StarListCache.getInstance().invalidate();
+                        if (mView != null) {
+                            mView.showSuccessToast(getString(R.string.repo_lists_updated));
+                        }
+                    }
+                }, false);
     }
 
 }

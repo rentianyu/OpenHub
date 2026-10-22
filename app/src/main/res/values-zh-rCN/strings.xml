@@ -384,4 +384,23 @@
     <string name="update_download">去下载</string>
     <string name="update_latest_version">已是最新版本。</string>
     <string name="update_check_failed">检查失败：%1$s</string>
+
+    <!--星标目录（GitHub Lists）-->
+    <string name="star_lists">目录</string>
+    <string name="star_lists_all">全部仓库</string>
+    <string name="star_list_new">新建目录…</string>
+    <string name="star_list_manage">管理目录…</string>
+    <string name="star_list_rename">重命名目录</string>
+    <string name="star_list_delete">删除目录</string>
+    <string name="star_list_name_hint">目录名称</string>
+    <string name="star_list_name_empty">目录名称不能为空</string>
+    <string name="star_list_create">创建</string>
+    <string name="star_list_updated">目录已更新</string>
+    <string name="star_list_no_data">还没有目录</string>
+    <string name="star_list_load_failed">目录加载失败：%1$s</string>
+    <string name="star_list_delete_confirm">删除目录「%1$s」？其中的仓库不会被取消星标。</string>
+    <string name="repo_add_to_list">加入目录</string>
+    <string name="repo_lists_title">选择目录</string>
+    <string name="repo_lists_updated">目录已更新</string>
+    <string name="star_list_missing_repo_id">缺少仓库标识，请刷新后重试</string>
 </resources>

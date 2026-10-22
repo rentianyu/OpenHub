@@ -23,13 +23,21 @@ import com.thirtydegreesray.openhub.mvp.model.Collection;
 import com.thirtydegreesray.openhub.mvp.model.Repository;
 import com.thirtydegreesray.openhub.mvp.model.SearchModel;
 import com.thirtydegreesray.openhub.mvp.model.SearchResult;
+import com.thirtydegreesray.openhub.mvp.model.StarList;
 import com.thirtydegreesray.openhub.mvp.model.Topic;
 import com.thirtydegreesray.openhub.mvp.model.TrendingLanguage;
 import com.thirtydegreesray.openhub.mvp.model.User;
 import com.thirtydegreesray.openhub.mvp.model.filter.RepositoriesFilter;
 import com.thirtydegreesray.openhub.mvp.model.filter.TrendingSince;
+import com.thirtydegreesray.openhub.mvp.model.graphql.GraphqlQueries;
+import com.thirtydegreesray.openhub.mvp.model.graphql.GraphqlRepo;
+import com.thirtydegreesray.openhub.mvp.model.graphql.GraphqlRequest;
+import com.thirtydegreesray.openhub.mvp.model.graphql.GraphqlResponse;
+import com.thirtydegreesray.openhub.mvp.model.graphql.StarListItemsData;
+import com.thirtydegreesray.openhub.mvp.model.graphql.StarListsData;
 import com.thirtydegreesray.openhub.mvp.presenter.base.BasePagerPresenter;
 import com.thirtydegreesray.openhub.ui.fragment.RepositoriesFragment;
+import com.thirtydegreesray.openhub.util.StarListCache;
 import com.thirtydegreesray.openhub.util.StringUtils;
 
 import org.greenrobot.eventbus.Subscribe;
@@ -41,7 +49,12 @@ import org.jsoup.select.Elements;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import javax.inject.Inject;
 
@@ -75,6 +88,12 @@ public class RepositoriesPresenter extends BasePagerPresenter<IRepositoriesContr
 
     @AutoAccess Collection collection;
     @AutoAccess Topic topic;
+
+    @AutoAccess String starListId;
+    @AutoAccess String starListName;
+
+    private ArrayList<StarList> starLists;
+    private boolean starListsLoaded = false;
 
     @Inject
     public RepositoriesPresenter(DaoSession daoSession) {
@@ -116,12 +135,22 @@ public class RepositoriesPresenter extends BasePagerPresenter<IRepositoriesContr
             loadTrending(false);
             return;
         }
+        if(RepositoriesFragment.RepositoriesType.STARRED.equals(type)){
+            loadStarLists();
+        }
         loadRepositories(false, 1);
     }
 
     @Override
     public void loadRepositories(final boolean isReLoad, final int page) {
         filter = getFilter();
+        if (RepositoriesFragment.RepositoriesType.STARRED.equals(type) && starListId != null) {
+            // 目录视图一次性加载全部数据，忽略翻页请求
+            if (page <= 1) {
+                loadStarListRepos(isReLoad);
+            }
+            return;
+        }
         if (type.equals(RepositoriesFragment.RepositoriesType.SEARCH)) {
             searchRepos(page);
             return;
@@ -600,5 +629,395 @@ public class RepositoriesPresenter extends BasePagerPresenter<IRepositoriesContr
 
     public TrendingLanguage getLanguage() {
         return language;
+    }
+
+    //========================== 星标目录（GitHub Lists） ==========================
+
+    @Override
+    public void loadStarLists() {
+        if (!RepositoriesFragment.RepositoriesType.STARRED.equals(type)) {
+            return;
+        }
+        if (starListsLoaded && starLists != null) {
+            if (mView != null) {
+                mView.showStarLists(starLists);
+            }
+            loadMemberships();
+            return;
+        }
+        StarListCache cache = StarListCache.getInstance();
+        if (cache.isValid() && cache.hasStarLists()) {
+            starLists = cache.getStarLists();
+            starListsLoaded = true;
+            syncCurStarList();
+            if (mView != null) {
+                mView.showStarLists(starLists);
+            }
+            loadMemberships();
+            return;
+        }
+        generalRxHttpExecute(
+                new IObservableCreator<GraphqlResponse<StarListsData>>() {
+                    @Nullable
+                    @Override
+                    public Observable<Response<GraphqlResponse<StarListsData>>> createObservable(boolean forceNetWork) {
+                        return getGraphqlService()
+                                .getStarLists(new GraphqlRequest(GraphqlQueries.QUERY_STAR_LISTS));
+                    }
+                },
+                new HttpObserver<GraphqlResponse<StarListsData>>() {
+                    @Override
+                    public void onError(@NonNull Throwable error) {
+                        Logger.e("load star lists failed", error);
+                    }
+
+                    @Override
+                    public void onSuccess(@NonNull HttpResponse<GraphqlResponse<StarListsData>> response) {
+                        ArrayList<StarList> lists = parseStarLists(response.body());
+                        if (lists == null) {
+                            return;
+                        }
+                        starLists = lists;
+                        starListsLoaded = true;
+                        StarListCache.getInstance().setStarLists(lists);
+                        syncCurStarList();
+                        if (mView != null) {
+                            mView.showStarLists(lists);
+                        }
+                        loadMemberships();
+                    }
+                }, false);
+    }
+
+    @Nullable
+    private ArrayList<StarList> parseStarLists(GraphqlResponse<StarListsData> response) {
+        if (response == null || response.hasErrors() || response.getData() == null
+                || response.getData().getViewer() == null
+                || response.getData().getViewer().getLists() == null) {
+            return null;
+        }
+        ArrayList<StarList> lists = response.getData().getViewer().getLists().getNodes();
+        return lists == null ? new ArrayList<StarList>() : lists;
+    }
+
+    private void syncCurStarList() {
+        if (starListId == null || starLists == null) {
+            return;
+        }
+        for (StarList list : starLists) {
+            if (starListId.equals(list.getId())) {
+                starListName = list.getName();
+                return;
+            }
+        }
+        // 当前目录已不存在（被删除），回退到「全部」
+        starListId = null;
+        starListName = null;
+    }
+
+    @Override
+    public void setStarList(@Nullable StarList starList) {
+        if (starList == null) {
+            starListId = null;
+            starListName = null;
+        } else {
+            starListId = starList.getId();
+            starListName = starList.getName();
+        }
+        setLoaded(false);
+        loadRepositories(true, 1);
+    }
+
+    @Nullable
+    @Override
+    public StarList getStarList() {
+        if (starListId == null || starLists == null) {
+            return null;
+        }
+        for (StarList list : starLists) {
+            if (starListId.equals(list.getId())) {
+                return list;
+            }
+        }
+        return null;
+    }
+
+    @Override
+    public ArrayList<StarList> getStarLists() {
+        return starLists;
+    }
+
+    @Nullable
+    public String getStarListName() {
+        return starListName;
+    }
+
+    public boolean hasStarListFilter() {
+        return starListId != null;
+    }
+
+    /**
+     * 仓库所属目录的展示文案，如「安卓」或「安卓 +2」，无归属返回 null
+     */
+    @Nullable
+    public String getStarListTag(String fullName) {
+        ArrayList<StarList> lists = StarListCache.getInstance().getMember(fullName);
+        if (lists == null || lists.isEmpty()) {
+            return null;
+        }
+        if (lists.size() == 1) {
+            return lists.get(0).getName();
+        }
+        return lists.get(0).getName() + " +" + (lists.size() - 1);
+    }
+
+    /**
+     * 依次拉取每个目录的成员，构建「仓库 -> 目录」映射，用于列表标签与详情页预选
+     */
+    private void loadMemberships() {
+        StarListCache cache = StarListCache.getInstance();
+        if (cache.isMembershipLoaded() || !cache.hasStarLists()) {
+            return;
+        }
+        cache.startMemberships();
+        loadMembershipOfList(0);
+    }
+
+    private void loadMembershipOfList(final int index) {
+        final StarListCache cache = StarListCache.getInstance();
+        final ArrayList<StarList> lists = cache.getStarLists();
+        if (lists == null || index >= lists.size()) {
+            if (mView != null && repos != null) {
+                mView.showRepositories(repos);
+            }
+            return;
+        }
+        final StarList starList = lists.get(index);
+        generalRxHttpExecute(
+                new IObservableCreator<GraphqlResponse<StarListItemsData>>() {
+                    @Nullable
+                    @Override
+                    public Observable<Response<GraphqlResponse<StarListItemsData>>> createObservable(boolean forceNetWork) {
+                        return getGraphqlService().getStarListItems(
+                                GraphqlRequest.withVariable(GraphqlQueries.QUERY_STAR_LIST_MEMBERS,
+                                        "id", starList.getId()));
+                    }
+                },
+                new HttpObserver<GraphqlResponse<StarListItemsData>>() {
+                    @Override
+                    public void onError(@NonNull Throwable error) {
+                        loadMembershipOfList(index + 1);
+                    }
+
+                    @Override
+                    public void onSuccess(@NonNull HttpResponse<GraphqlResponse<StarListItemsData>> response) {
+                        GraphqlResponse<StarListItemsData> body = response.body();
+                        if (body != null && !body.hasErrors() && body.getData() != null
+                                && body.getData().getNode() != null
+                                && body.getData().getNode().getItems() != null) {
+                            ArrayList<GraphqlRepo> nodes = body.getData().getNode().getItems().getNodes();
+                            if (nodes != null) {
+                                for (GraphqlRepo node : nodes) {
+                                    cache.addMember(node.getNameWithOwner(), starList);
+                                }
+                            }
+                        }
+                        loadMembershipOfList(index + 1);
+                    }
+                }, false);
+    }
+
+    private final static int MAX_STAR_LIST_PAGES = 10;
+
+    private void loadStarListRepos(boolean isReLoad) {
+        if (mView != null) {
+            mView.showLoading();
+        }
+        loadStarListReposPage(starListId, null, new ArrayList<Repository>(), 1);
+    }
+
+    private void loadStarListReposPage(final String listId, final String after,
+                                       final ArrayList<Repository> result, final int page) {
+        generalRxHttpExecute(
+                new IObservableCreator<GraphqlResponse<StarListItemsData>>() {
+                    @Nullable
+                    @Override
+                    public Observable<Response<GraphqlResponse<StarListItemsData>>> createObservable(boolean forceNetWork) {
+                        Map<String, Object> variables = new HashMap<>();
+                        variables.put("id", listId);
+                        variables.put("after", after);
+                        return getGraphqlService().getStarListItems(
+                                new GraphqlRequest(GraphqlQueries.QUERY_STAR_LIST_ITEMS, variables));
+                    }
+                },
+                new HttpObserver<GraphqlResponse<StarListItemsData>>() {
+                    @Override
+                    public void onError(@NonNull Throwable error) {
+                        if (result.isEmpty()) {
+                            if (mView != null) {
+                                mView.hideLoading();
+                                mView.showLoadError(getErrorTip(error));
+                            }
+                        } else {
+                            showStarListRepos(result);
+                        }
+                    }
+
+                    @Override
+                    public void onSuccess(@NonNull HttpResponse<GraphqlResponse<StarListItemsData>> response) {
+                        GraphqlResponse<StarListItemsData> body = response.body();
+                        if (body == null || body.hasErrors()) {
+                            onError(new IOException("graphql error: "
+                                    + (body == null ? "empty body" : body.getErrorMessages())));
+                            return;
+                        }
+                        StarListItemsData.Node node = body.getData() == null ? null : body.getData().getNode();
+                        StarListItemsData.Items items = node == null ? null : node.getItems();
+                        if (items == null) {
+                            showStarListRepos(result);
+                            return;
+                        }
+                        if (items.getNodes() != null) {
+                            for (GraphqlRepo graphqlRepo : items.getNodes()) {
+                                result.add(graphqlRepo.toRepository());
+                            }
+                        }
+                        StarListItemsData.PageInfo pageInfo = items.getPageInfo();
+                        if (pageInfo != null && pageInfo.isHasNextPage()
+                                && pageInfo.getEndCursor() != null
+                                && page < MAX_STAR_LIST_PAGES) {
+                            loadStarListReposPage(listId, pageInfo.getEndCursor(), result, page + 1);
+                        } else {
+                            showStarListRepos(result);
+                        }
+                    }
+                }, false);
+    }
+
+    private void showStarListRepos(ArrayList<Repository> list) {
+        sortStarListRepos(list);
+        repos = list;
+        if (mView != null) {
+            mView.setCanLoadMore(false);
+            mView.showRepositories(repos);
+            mView.hideLoading();
+        }
+    }
+
+    /**
+     * 目录内仓库的本地排序。GitHub 目录接口不返回仓库加入目录的时间，
+     * 因此「星标时间」两种排序保持目录默认顺序，其余排序本地完成。
+     */
+    private void sortStarListRepos(ArrayList<Repository> list) {
+        final RepositoriesFilter currentFilter = getFilter();
+        final String sort = currentFilter.getSort();
+        final boolean desc = "desc".equals(currentFilter.getSortDirection());
+        if (!"updated".equals(sort) && !"pushed".equals(sort) && !"full_name".equals(sort)) {
+            return;
+        }
+        Collections.sort(list, new Comparator<Repository>() {
+            @Override
+            public int compare(Repository left, Repository right) {
+                int result;
+                if ("updated".equals(sort)) {
+                    result = compareTime(left.getUpdatedAt(), right.getUpdatedAt());
+                } else if ("pushed".equals(sort)) {
+                    result = compareTime(left.getPushedAt(), right.getPushedAt());
+                } else {
+                    result = compareString(left.getFullName(), right.getFullName());
+                }
+                return desc ? -result : result;
+            }
+        });
+    }
+
+    private int compareTime(Date left, Date right) {
+        long leftTime = left == null ? 0 : left.getTime();
+        long rightTime = right == null ? 0 : right.getTime();
+        if (leftTime == rightTime) {
+            return 0;
+        }
+        return leftTime < rightTime ? -1 : 1;
+    }
+
+    private int compareString(String left, String right) {
+        String leftValue = left == null ? "" : left;
+        String rightValue = right == null ? "" : right;
+        return leftValue.compareToIgnoreCase(rightValue);
+    }
+
+    /**
+     * 新建星标目录
+     */
+    public void createStarList(final String name) {
+        Map<String, Object> variables = new HashMap<>();
+        variables.put("name", name);
+        postStarListMutation(GraphqlQueries.MUTATION_CREATE_LIST, variables);
+    }
+
+    /**
+     * 重命名星标目录
+     */
+    public void renameStarList(@Nullable StarList starList, final String newName) {
+        if (starList == null) {
+            return;
+        }
+        Map<String, Object> variables = new HashMap<>();
+        variables.put("listId", starList.getId());
+        variables.put("name", newName);
+        postStarListMutation(GraphqlQueries.MUTATION_UPDATE_LIST, variables);
+    }
+
+    /**
+     * 删除星标目录（目录内仓库不会被取消星标）
+     */
+    public void deleteStarList(@Nullable StarList starList) {
+        if (starList == null) {
+            return;
+        }
+        Map<String, Object> variables = new HashMap<>();
+        variables.put("listId", starList.getId());
+        postStarListMutation(GraphqlQueries.MUTATION_DELETE_LIST, variables);
+    }
+
+    private void postStarListMutation(final String query, final Map<String, Object> variables) {
+        generalRxHttpExecute(
+                new IObservableCreator<GraphqlResponse<MutationData>>() {
+                    @Nullable
+                    @Override
+                    public Observable<Response<GraphqlResponse<MutationData>>> createObservable(boolean forceNetWork) {
+                        return getGraphqlService().postMutation(new GraphqlRequest(query, variables));
+                    }
+                },
+                new HttpObserver<GraphqlResponse<MutationData>>() {
+                    @Override
+                    public void onError(@NonNull Throwable error) {
+                        if (mView != null) {
+                            mView.showErrorToast(getErrorTip(error));
+                        }
+                    }
+
+                    @Override
+                    public void onSuccess(@NonNull HttpResponse<GraphqlResponse<MutationData>> response) {
+                        GraphqlResponse<MutationData> body = response.body();
+                        if (body != null && body.hasErrors()) {
+                            if (mView != null) {
+                                mView.showErrorToast(body.getErrorMessages());
+                            }
+                            return;
+                        }
+                        refreshStarLists();
+                    }
+                }, false);
+    }
+
+    private void refreshStarLists() {
+        StarListCache.getInstance().invalidate();
+        starLists = null;
+        starListsLoaded = false;
+        if (mView != null) {
+            mView.showSuccessToast(getString(R.string.star_list_updated));
+        }
+        loadStarLists();
     }
 }

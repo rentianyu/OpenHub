@@ -493,4 +493,23 @@
     <string name="update_download" >Download</string>
     <string name="update_latest_version" >You are on the latest version.</string>
     <string name="update_check_failed" >Check failed: %1$s</string>
+
+    <!--star lists (GitHub Lists)-->
+    <string name="star_lists">Lists</string>
+    <string name="star_lists_all">All repositories</string>
+    <string name="star_list_new">New list…</string>
+    <string name="star_list_manage">Manage lists…</string>
+    <string name="star_list_rename">Rename list</string>
+    <string name="star_list_delete">Delete list</string>
+    <string name="star_list_name_hint">List name</string>
+    <string name="star_list_name_empty">List name can not be empty</string>
+    <string name="star_list_create">Create</string>
+    <string name="star_list_updated">Lists updated</string>
+    <string name="star_list_no_data">No list yet</string>
+    <string name="star_list_load_failed">Failed to load lists: %1$s</string>
+    <string name="star_list_delete_confirm">Delete list \"%1$s\"? Repositories in it will not be unstarred.</string>
+    <string name="repo_add_to_list">Add to list</string>
+    <string name="repo_lists_title">Add to lists</string>
+    <string name="repo_lists_updated">Lists updated</string>
+    <string name="star_list_missing_repo_id">Repository id is missing, please reload</string>
 </resources>

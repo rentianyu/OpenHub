@@ -74,6 +74,16 @@
                 android:paddingTop="@dimen/spacing_mini"
                 android:paddingBottom="@dimen/spacing_mini"
                 android:textColor="?android:textColorPrimary"/>
+            <TextView
+                android:id="@+id/tv_star_lists"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:textSize="@dimen/text_mini"
+                android:textColor="?colorAccent"
+                android:maxLines="1"
+                android:ellipsize="end"
+                android:visibility="gone"
+                android:paddingBottom="@dimen/spacing_mini"/>
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"

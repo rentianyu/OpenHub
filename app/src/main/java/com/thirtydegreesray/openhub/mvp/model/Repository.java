@@ -48,6 +48,8 @@ public class Repository implements Parcelable {
     @SerializedName("open_issues_count") private int openIssuesCount ;
     @SerializedName("subscribers_count") private int subscribersCount ;
 
+    @SerializedName("node_id") private String nodeId ;
+
     private boolean fork;
     private Repository parent;
     private RepositoryPermissions permissions;
@@ -304,6 +306,14 @@ public class Repository implements Parcelable {
 
     public void setFork(boolean fork) {
         this.fork = fork;
+    }
+
+    public String getNodeId() {
+        return nodeId;
+    }
+
+    public void setNodeId(String nodeId) {
+        this.nodeId = nodeId;
     }
 
     public RepositoryPermissions getPermissions() {

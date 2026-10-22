@@ -2,14 +2,18 @@
 
 package com.thirtydegreesray.openhub.ui.fragment;
 
+import android.content.DialogInterface;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.design.widget.NavigationView;
+import android.support.v7.app.AlertDialog;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
+import android.view.SubMenu;
 import android.view.View;
+import android.widget.EditText;
 
 import com.thirtydegreesray.openhub.R;
 import com.thirtydegreesray.openhub.inject.component.AppComponent;
@@ -19,6 +23,7 @@ import com.thirtydegreesray.openhub.mvp.contract.IRepositoriesContract;
 import com.thirtydegreesray.openhub.mvp.model.Collection;
 import com.thirtydegreesray.openhub.mvp.model.Repository;
 import com.thirtydegreesray.openhub.mvp.model.SearchModel;
+import com.thirtydegreesray.openhub.mvp.model.StarList;
 import com.thirtydegreesray.openhub.mvp.model.Topic;
 import com.thirtydegreesray.openhub.mvp.model.TrendingLanguage;
 import com.thirtydegreesray.openhub.mvp.model.filter.RepositoriesFilter;
@@ -29,9 +34,12 @@ import com.thirtydegreesray.openhub.ui.activity.TrendingActivity;
 import com.thirtydegreesray.openhub.ui.adapter.RepositoriesAdapter;
 import com.thirtydegreesray.openhub.ui.fragment.base.ListFragment;
 import com.thirtydegreesray.openhub.ui.fragment.base.OnDrawerSelectedListener;
+import com.thirtydegreesray.openhub.ui.widget.StarListsDialog;
 import com.thirtydegreesray.openhub.util.BundleHelper;
 
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * Created on 2017/7/18.
@@ -126,7 +134,85 @@ public class RepositoriesFragment extends ListFragment<RepositoriesPresenter, Re
     @Override
     public void showRepositories(ArrayList<Repository> repositoryList) {
         adapter.setData(repositoryList);
+        adapter.setStarListTags(buildStarListTags(repositoryList));
         postNotifyDataSetChanged();
+    }
+
+    /**
+     * 星标页为仓库生成「所属目录」标签，其他页面返回空
+     */
+    @NonNull
+    private Map<String, String> buildStarListTags(@Nullable ArrayList<Repository> repositoryList) {
+        Map<String, String> tags = new HashMap<>();
+        if (repositoryList == null || !RepositoriesType.STARRED.equals(mPresenter.getType())) {
+            return tags;
+        }
+        for (Repository repository : repositoryList) {
+            if (repository == null || repository.getFullName() == null) {
+                continue;
+            }
+            String tag = mPresenter.getStarListTag(repository.getFullName());
+            if (tag != null) {
+                tags.put(repository.getFullName(), tag);
+            }
+        }
+        return tags;
+    }
+
+    //====================== 星标目录（GitHub Lists） ======================
+
+    private final static int MENU_ID_STAR_LISTS = 90001;
+    private final static int MENU_ID_STAR_LIST_NEW = 90002;
+    private final static int MENU_ID_STAR_LIST_MANAGE = 90003;
+    private final static int MENU_ID_STAR_LIST_ITEM_BASE = 90100;
+
+    @Override
+    public void showStarLists(ArrayList<StarList> starLists) {
+        if (getActivity() != null) {
+            getActivity().invalidateOptionsMenu();
+        }
+        if (adapter != null && adapter.getData() != null) {
+            adapter.setStarListTags(buildStarListTags(adapter.getData()));
+            postNotifyDataSetChanged();
+        }
+    }
+
+    @NonNull
+    private String buildStarListsMenuTitle() {
+        String title = getString(R.string.star_lists);
+        if (mPresenter.hasStarListFilter()) {
+            String name = mPresenter.getStarListName();
+            if (name != null) {
+                String shortName = name.length() > 10 ? name.substring(0, 10) + "…" : name;
+                title = title + " · " + shortName;
+            }
+        }
+        return title;
+    }
+
+    private void showNewStarListDialog() {
+        if (getActivity() == null) {
+            return;
+        }
+        final EditText editText = new EditText(getActivity());
+        editText.setSingleLine(true);
+        editText.setHint(R.string.star_list_name_hint);
+        new AlertDialog.Builder(getActivity())
+                .setTitle(R.string.star_list_new)
+                .setView(editText)
+                .setPositiveButton(R.string.star_list_create, new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        String name = editText.getText().toString().trim();
+                        if (name.length() == 0) {
+                            showToast(getString(R.string.star_list_name_empty));
+                            return;
+                        }
+                        mPresenter.createStarList(name);
+                    }
+                })
+                .setNegativeButton(R.string.cancel, null)
+                .show();
     }
 
     @Override
@@ -185,18 +271,66 @@ public class RepositoriesFragment extends ListFragment<RepositoriesPresenter, Re
     @Override
     public void onCreateOptionsMenu(Menu menu, MenuInflater inflater) {
         super.onCreateOptionsMenu(menu, inflater);
-//        if(mPresenter.getType().equals(RepositoriesType.OWNED)){
-//            inflater.inflate(R.menu.menu_owned_repo, menu);
-//            if(!mPresenter.getUser().equals(AppData.INSTANCE.getLoggedUser().getLogin())){
-//                menu.findItem(R.id.action_filter_public).setVisible(false);
-//                menu.findItem(R.id.action_filter_private).setVisible(false);
-//            }
-//        }
+        if (mPresenter == null || !RepositoriesType.STARRED.equals(mPresenter.getType())
+                || isHidden()) {
+            return;
+        }
+        final ArrayList<StarList> starLists = mPresenter.getStarLists();
+        if (starLists == null) {
+            return;
+        }
+        SubMenu subMenu = menu.addSubMenu(Menu.NONE, MENU_ID_STAR_LISTS, 90, buildStarListsMenuTitle());
+        subMenu.getItem().setShowAsAction(MenuItem.SHOW_AS_ACTION_IF_ROOM
+                | MenuItem.SHOW_AS_ACTION_WITH_TEXT);
+
+        MenuItem allItem = subMenu.add(Menu.NONE, MENU_ID_STAR_LIST_ITEM_BASE, 0,
+                getString(R.string.star_lists_all));
+        allItem.setCheckable(true);
+        allItem.setChecked(!mPresenter.hasStarListFilter());
+
+        for (int i = 0; i < starLists.size(); i++) {
+            StarList starList = starLists.get(i);
+            MenuItem item = subMenu.add(Menu.NONE, MENU_ID_STAR_LIST_ITEM_BASE + 1 + i, i + 1,
+                    starList.getName() + " (" + starList.getCount() + ")");
+            item.setCheckable(true);
+            item.setChecked(starList.sameAs(mPresenter.getStarList()));
+        }
+
+        subMenu.add(Menu.NONE, MENU_ID_STAR_LIST_NEW, 900, getString(R.string.star_list_new));
+        subMenu.add(Menu.NONE, MENU_ID_STAR_LIST_MANAGE, 901, getString(R.string.star_list_manage));
     }
 
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
+        int itemId = item.getItemId();
+        if (itemId == MENU_ID_STAR_LISTS) {
+            return true;
+        }
+        if (itemId == MENU_ID_STAR_LIST_NEW) {
+            showNewStarListDialog();
+            return true;
+        }
+        if (itemId == MENU_ID_STAR_LIST_MANAGE) {
+            StarListsDialog.showManage(getActivity(), mPresenter);
+            return true;
+        }
+        if (itemId >= MENU_ID_STAR_LIST_ITEM_BASE) {
+            switchStarListItem(itemId - MENU_ID_STAR_LIST_ITEM_BASE);
+            return true;
+        }
         return super.onOptionsItemSelected(item);
+    }
+
+    private void switchStarListItem(int index) {
+        ArrayList<StarList> starLists = mPresenter.getStarLists();
+        if (index == 0) {
+            mPresenter.setStarList(null);
+        } else if (starLists != null && index - 1 < starLists.size() && index - 1 >= 0) {
+            mPresenter.setStarList(starLists.get(index - 1));
+        }
+        if (getActivity() != null) {
+            getActivity().invalidateOptionsMenu();
+        }
     }
 
     @Override

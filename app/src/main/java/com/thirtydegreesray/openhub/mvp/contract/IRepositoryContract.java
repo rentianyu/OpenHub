@@ -5,6 +5,7 @@ package com.thirtydegreesray.openhub.mvp.contract;
 import com.thirtydegreesray.openhub.mvp.contract.base.IBaseContract;
 import com.thirtydegreesray.openhub.mvp.model.Branch;
 import com.thirtydegreesray.openhub.mvp.model.Repository;
+import com.thirtydegreesray.openhub.mvp.model.StarList;
 
 import java.util.ArrayList;
 
@@ -19,6 +20,11 @@ public interface IRepositoryContract {
         void showBranchesAndTags(ArrayList<Branch> list, Branch curBranch);
         void invalidateOptionsMenu();
         void showStarWishes();
+
+        /**
+         * 星标目录加载完成，selectedIds 为当前仓库已所属的目录
+         */
+        void showRepoStarLists(ArrayList<StarList> starLists, ArrayList<String> selectedIds);
     }
 
     interface Presenter extends IBaseContract.Presenter<IRepositoryContract.View>{
@@ -29,6 +35,16 @@ public interface IRepositoryContract {
         boolean isForkEnable();
         boolean isBookmarked();
         void bookmark(boolean bookmark);
+
+        /**
+         * 加载星标目录及当前仓库的归属
+         */
+        void loadRepoStarLists();
+
+        /**
+         * 保存当前仓库所属目录（覆盖式）
+         */
+        void updateRepoStarLists(ArrayList<String> listIds);
     }
 
 }

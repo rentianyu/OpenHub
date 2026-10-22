@@ -6,6 +6,7 @@ import android.app.Activity;
 import android.content.Context;
 import android.content.res.ColorStateList;
 import android.support.annotation.NonNull;
+import android.support.annotation.Nullable;
 import android.support.v7.widget.RecyclerView;
 import android.view.View;
 import android.widget.ImageView;
@@ -24,6 +25,8 @@ import com.thirtydegreesray.openhub.util.PrefUtils;
 import com.thirtydegreesray.openhub.util.StringUtils;
 import com.thirtydegreesray.openhub.util.ViewUtils;
 
+import java.util.Map;
+
 import javax.inject.Inject;
 
 import butterknife.BindView;
@@ -40,6 +43,13 @@ public class RepositoriesAdapter extends BaseAdapter<RepositoriesAdapter.ViewHol
     @Inject
     public RepositoriesAdapter(Context context, BaseFragment fragment){
         super(context, fragment);
+    }
+
+    /** 仓库 fullName -> 所属星标目录展示文案 */
+    private Map<String, String> starListTags;
+
+    public void setStarListTags(@Nullable Map<String, String> starListTags) {
+        this.starListTags = starListTags;
     }
 
     @Override
@@ -68,6 +78,7 @@ public class RepositoriesAdapter extends BaseAdapter<RepositoriesAdapter.ViewHol
         @BindView(R.id.since_star_lay) LinearLayout sinceStarLay;
         @BindView(R.id.owner_lay) LinearLayout ownerLay;
         @BindView(R.id.fork_mark) View forkMark;
+        @BindView(R.id.tv_star_lists) TextView tvStarLists;
 
         public ViewHolder(@NonNull View itemView) {
             super(itemView);
@@ -137,5 +148,16 @@ public class RepositoriesAdapter extends BaseAdapter<RepositoriesAdapter.ViewHol
         }
 
         holder.forkMark.setVisibility(repository.isFork() ? View.VISIBLE : View.GONE);
+
+        String starListTag = null;
+        if (starListTags != null && repository.getFullName() != null) {
+            starListTag = starListTags.get(repository.getFullName());
+        }
+        if (StringUtils.isBlank(starListTag)) {
+            holder.tvStarLists.setVisibility(View.GONE);
+        } else {
+            holder.tvStarLists.setVisibility(View.VISIBLE);
+            holder.tvStarLists.setText(starListTag);
+        }
     }
 }
