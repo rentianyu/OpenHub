@@ -7,6 +7,7 @@ import android.support.annotation.Nullable;
 
 import com.thirtydegreesray.openhub.mvp.model.GitHubName;
 import com.thirtydegreesray.openhub.util.GitHubHelper;
+import com.thirtydegreesray.openhub.util.HtmlLinkifier;
 import com.thirtydegreesray.openhub.util.StringUtils;
 
 import java.util.Arrays;
@@ -103,6 +104,8 @@ class HtmlHelper {
         mdSource = StringUtils.isBlank(baseUrl) ? mdSource : fixLinks(mdSource, baseUrl);
         //fix wiki inner url like this "href="/robbyrussell/oh-my-zsh/wiki/Themes"" 
         mdSource = fixWikiLinks(mdSource);
+        //turn plain text urls (bare domains, urls missed by the upstream renderer) into links
+        mdSource = HtmlLinkifier.linkify(mdSource);
         return generateMdHtml(mdSource, skin, backgroundColor, accentColor, wrapCode);
     }
 
