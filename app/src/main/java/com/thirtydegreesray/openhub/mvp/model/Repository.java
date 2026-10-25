@@ -60,6 +60,9 @@ public class Repository implements Parcelable {
     @SerializedName("has_wiki") private boolean hasWiki;
     @SerializedName("has_pages") private boolean hasPages;
 
+    private String homepage;
+    private boolean archived;
+
     private int sinceStargazersCount ;
     private TrendingSince since;
 
@@ -380,6 +383,22 @@ public class Repository implements Parcelable {
         this.hasPages = hasPages;
     }
 
+    public String getHomepage() {
+        return homepage;
+    }
+
+    public void setHomepage(String homepage) {
+        this.homepage = homepage;
+    }
+
+    public boolean isArchived() {
+        return archived;
+    }
+
+    public void setArchived(boolean archived) {
+        this.archived = archived;
+    }
+
     public int getSinceStargazersCount() {
         return sinceStargazersCount;
     }
@@ -435,6 +454,8 @@ public class Repository implements Parcelable {
         dest.writeByte(this.hasPages ? (byte) 1 : (byte) 0);
         dest.writeInt(this.sinceStargazersCount);
         dest.writeInt(this.since == null ? -1 : this.since.ordinal());
+        dest.writeString(this.homepage);
+        dest.writeByte(this.archived ? (byte) 1 : (byte) 0);
 
     }
 
@@ -475,6 +496,8 @@ public class Repository implements Parcelable {
         this.sinceStargazersCount = in.readInt();
         int tmpTrendingSince = in.readInt();
         this.since = tmpTrendingSince == -1 ? null : TrendingSince.values()[tmpTrendingSince];
+        this.homepage = in.readString();
+        this.archived = in.readByte() != 0;
     }
 
     public static final Creator<Repository> CREATOR = new Creator<Repository>() {

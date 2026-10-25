@@ -14,6 +14,10 @@
         android:title="@string/repo_add_to_list"
         app:showAsAction="never"/>
     <item
+        android:id="@+id/action_edit_repo"
+        android:title="@string/repo_edit"
+        app:showAsAction="never"/>
+    <item
         android:id="@+id/action_branch"
         android:title="@string/branch_tip"
         android:icon="@drawable/ic_branch_title"

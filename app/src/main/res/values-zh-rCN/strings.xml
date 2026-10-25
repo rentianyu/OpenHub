@@ -403,4 +403,36 @@
     <string name="repo_lists_title">选择目录</string>
     <string name="repo_lists_updated">目录已更新</string>
     <string name="star_list_missing_repo_id">缺少仓库标识，请刷新后重试</string>
+
+    <!-- 仓库管理（增 / 改 / 删） -->
+    <string name="repo_new">新建仓库</string>
+    <string name="repo_edit">编辑仓库</string>
+    <string name="repo_manage">管理仓库</string>
+    <string name="repo_new_action">新建仓库</string>
+    <string name="repo_edit_action">编辑</string>
+    <string name="repo_delete_action">删除</string>
+    <string name="repo_name">仓库名</string>
+    <string name="repo_description">描述（可选）</string>
+    <string name="repo_homepage">主页（可选）</string>
+    <string name="repo_private">私有仓库</string>
+    <string name="repo_auto_init">自动初始化 README</string>
+    <string name="repo_features">功能</string>
+    <string name="repo_has_issues">Issues</string>
+    <string name="repo_has_wiki">Wiki</string>
+    <string name="repo_has_projects">Projects</string>
+    <string name="repo_archived">归档（只读）</string>
+    <string name="repo_delete">删除这个仓库</string>
+    <string name="repo_delete_confirm_msg">此操作不可撤销。请输入 %1$s 以确认删除。</string>
+    <string name="repo_delete_name_mismatch">仓库名不匹配</string>
+    <string name="repo_delete_missing_name">缺少仓库名</string>
+    <string name="repo_delete_need_scope">当前登录令牌没有删除仓库的权限，请退出后重新登录以授权 delete_repo。</string>
+    <string name="repo_save">保存</string>
+    <string name="repo_creating">正在创建仓库…</string>
+    <string name="repo_saving">正在保存…</string>
+    <string name="repo_deleting">正在删除仓库…</string>
+    <string name="repo_created">仓库 %1$s 已创建</string>
+    <string name="repo_updated">仓库 %1$s 已更新</string>
+    <string name="repo_deleted">仓库 %1$s 已删除</string>
+    <string name="repo_name_empty">仓库名不能为空</string>
+    <string name="repo_name_invalid">只能包含字母、数字、点、短横线和下划线</string>
 </resources>

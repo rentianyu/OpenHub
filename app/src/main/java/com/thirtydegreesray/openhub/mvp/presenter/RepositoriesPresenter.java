@@ -281,6 +281,17 @@ public class RepositoriesPresenter extends BasePagerPresenter<IRepositoriesContr
         prepareLoadData();
     }
 
+    /**
+     * a repository was created / edited / deleted, reload the owned list
+     */
+    @Subscribe
+    public void onRepoChangedEvent(@NonNull Event.RepoChangedEvent repoChangedEvent) {
+        if (RepositoriesFragment.RepositoriesType.OWNED.equals(type) && isViewInitialized()) {
+            setLoaded(false);
+            prepareLoadData();
+        }
+    }
+
     private void handleError(Throwable error) {
         if (!StringUtils.isBlankList(repos)) {
             mView.showErrorToast(getErrorTip(error));

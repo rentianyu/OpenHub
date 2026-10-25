@@ -512,4 +512,36 @@
     <string name="repo_lists_title">Add to lists</string>
     <string name="repo_lists_updated">Lists updated</string>
     <string name="star_list_missing_repo_id">Repository id is missing, please reload</string>
+
+    <!-- repository management (create / edit / delete) -->
+    <string name="repo_new">New repository</string>
+    <string name="repo_edit">Edit repository</string>
+    <string name="repo_manage">Manage repository</string>
+    <string name="repo_new_action">New repository</string>
+    <string name="repo_edit_action">Edit</string>
+    <string name="repo_delete_action">Delete</string>
+    <string name="repo_name">Repository name</string>
+    <string name="repo_description">Description (optional)</string>
+    <string name="repo_homepage">Homepage (optional)</string>
+    <string name="repo_private">Private repository</string>
+    <string name="repo_auto_init">Initialize with a README</string>
+    <string name="repo_features">Features</string>
+    <string name="repo_has_issues">Issues</string>
+    <string name="repo_has_wiki">Wiki</string>
+    <string name="repo_has_projects">Projects</string>
+    <string name="repo_archived">Archive (read only)</string>
+    <string name="repo_delete">Delete this repository</string>
+    <string name="repo_delete_confirm_msg">This action can not be undone. Type %1$s to confirm.</string>
+    <string name="repo_delete_name_mismatch">Repository name does not match</string>
+    <string name="repo_delete_missing_name">Missing repository name</string>
+    <string name="repo_delete_need_scope">Your token is not allowed to delete repositories. Sign out and sign in again to grant the delete_repo scope.</string>
+    <string name="repo_save">Save</string>
+    <string name="repo_creating">Creating repository…</string>
+    <string name="repo_saving">Saving…</string>
+    <string name="repo_deleting">Deleting repository…</string>
+    <string name="repo_created">Repository %1$s created</string>
+    <string name="repo_updated">Repository %1$s updated</string>
+    <string name="repo_deleted">Repository %1$s deleted</string>
+    <string name="repo_name_empty">Repository name can not be empty</string>
+    <string name="repo_name_invalid">Only letters, numbers, dots, dashes and underscores are allowed</string>
 </resources>

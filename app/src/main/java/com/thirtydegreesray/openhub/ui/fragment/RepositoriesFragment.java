@@ -29,6 +29,7 @@ import com.thirtydegreesray.openhub.mvp.model.TrendingLanguage;
 import com.thirtydegreesray.openhub.mvp.model.filter.RepositoriesFilter;
 import com.thirtydegreesray.openhub.mvp.model.filter.TrendingSince;
 import com.thirtydegreesray.openhub.mvp.presenter.RepositoriesPresenter;
+import com.thirtydegreesray.openhub.ui.activity.EditReposActivity;
 import com.thirtydegreesray.openhub.ui.activity.RepositoryActivity;
 import com.thirtydegreesray.openhub.ui.activity.TrendingActivity;
 import com.thirtydegreesray.openhub.ui.adapter.RepositoriesAdapter;
@@ -165,6 +166,7 @@ public class RepositoriesFragment extends ListFragment<RepositoriesPresenter, Re
     private final static int MENU_ID_STAR_LIST_NEW = 90002;
     private final static int MENU_ID_STAR_LIST_MANAGE = 90003;
     private final static int MENU_ID_STAR_LIST_ITEM_BASE = 90100;
+    private final static int MENU_ID_NEW_REPO = 90004;
 
     @Override
     public void showStarLists(ArrayList<StarList> starLists) {
@@ -271,8 +273,17 @@ public class RepositoriesFragment extends ListFragment<RepositoriesPresenter, Re
     @Override
     public void onCreateOptionsMenu(Menu menu, MenuInflater inflater) {
         super.onCreateOptionsMenu(menu, inflater);
-        if (mPresenter == null || !RepositoriesType.STARRED.equals(mPresenter.getType())
-                || isHidden()) {
+        if (mPresenter == null || isHidden()) {
+            return;
+        }
+        //owned repositories: one entry to create a new one, long press a card to edit / delete
+        if (RepositoriesType.OWNED.equals(mPresenter.getType())) {
+            MenuItem newRepoItem = menu.add(Menu.NONE, MENU_ID_NEW_REPO, 90,
+                    getString(R.string.repo_new_action));
+            newRepoItem.setShowAsAction(MenuItem.SHOW_AS_ACTION_NEVER);
+            return;
+        }
+        if (!RepositoriesType.STARRED.equals(mPresenter.getType())) {
             return;
         }
         final ArrayList<StarList> starLists = mPresenter.getStarLists();
@@ -303,6 +314,10 @@ public class RepositoriesFragment extends ListFragment<RepositoriesPresenter, Re
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
         int itemId = item.getItemId();
+        if (itemId == MENU_ID_NEW_REPO) {
+            EditReposActivity.showForAdd(getActivity());
+            return true;
+        }
         if (itemId == MENU_ID_STAR_LISTS) {
             return true;
         }
@@ -319,6 +334,39 @@ public class RepositoriesFragment extends ListFragment<RepositoriesPresenter, Re
             return true;
         }
         return super.onOptionsItemSelected(item);
+    }
+
+    @Override
+    public boolean onItemLongClick(int position, @NonNull View view) {
+        if (mPresenter == null || !RepositoriesType.OWNED.equals(mPresenter.getType())
+                || adapter == null || adapter.getData() == null
+                || position < 0 || position >= adapter.getData().size()) {
+            return super.onItemLongClick(position, view);
+        }
+        showRepoManageDialog(adapter.getData().get(position));
+        return true;
+    }
+
+    private void showRepoManageDialog(@NonNull final Repository repository) {
+        if (getActivity() == null || repository == null) {
+            return;
+        }
+        final String[] items = new String[]{
+                getString(R.string.repo_edit_action),
+                getString(R.string.repo_delete_action)};
+        new AlertDialog.Builder(getActivity())
+                .setTitle(repository.getFullName())
+                .setItems(items, new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        if (which == 0) {
+                            EditReposActivity.showForEdit(getActivity(), repository);
+                        } else {
+                            EditReposActivity.showForDelete(getActivity(), repository);
+                        }
+                    }
+                })
+                .show();
     }
 
     private void switchStarListItem(int index) {

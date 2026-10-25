@@ -25,7 +25,7 @@ public class AuthRequestModel {
 
     public static AuthRequestModel generate(){
         AuthRequestModel model = new AuthRequestModel();
-        model.scopes = Arrays.asList("user", "repo", "gist", "notifications");
+        model.scopes = Arrays.asList("user", "repo", "gist", "notifications", "delete_repo");
         model.note = BuildConfig.APPLICATION_ID;
         model.clientId = AppConfig.OPENHUB_CLIENT_ID;
         model.clientSecret = AppConfig.OPENHUB_CLIENT_SECRET;

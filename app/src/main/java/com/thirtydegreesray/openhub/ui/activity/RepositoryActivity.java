@@ -118,6 +118,8 @@ public class RepositoryActivity extends PagerActivity<RepositoryPresenter>
                     getString(R.string.remove_bookmark) : getString(R.string.bookmark));
             menu.findItem(R.id.action_wiki).setVisible(mPresenter.getRepository().isHasWiki());
             menu.findItem(R.id.action_star_lists).setVisible(mPresenter.isStarred());
+            //only the owner (admin permission) can edit / delete the repository
+            menu.findItem(R.id.action_edit_repo).setVisible(canEditRepository());
         }
         return true;
     }
@@ -136,6 +138,10 @@ public class RepositoryActivity extends PagerActivity<RepositoryPresenter>
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
         switch (item.getItemId()) {
+            case R.id.action_edit_repo:
+                EditReposActivity.showForEdit(getActivity(), mPresenter.getRepository(),
+                        REQUEST_CODE_EDIT_REPO);
+                return true;
             case R.id.action_star:
                 starRepo(!mPresenter.isStarred());
                 return true;
@@ -322,6 +328,35 @@ public class RepositoryActivity extends PagerActivity<RepositoryPresenter>
     public void hideLoading() {
         super.hideLoading();
         loader.setVisibility(View.GONE);
+    }
+
+    private final int REQUEST_CODE_EDIT_REPO = 300;
+
+    private boolean canEditRepository() {
+        Repository repository = mPresenter.getRepository();
+        return repository != null && repository.getPermissions() != null
+                && repository.getPermissions().isAdmin();
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode != REQUEST_CODE_EDIT_REPO || resultCode != RESULT_OK || data == null) {
+            return;
+        }
+        if (data.getBooleanExtra("deleted", false)) {
+            finish();
+            return;
+        }
+        Repository repository = data.getParcelableExtra("repository");
+        if (repository == null || repository.getOwner() == null || repository.getName() == null) {
+            finish();
+            return;
+        }
+        //reopen with fresh data, the repository may have been renamed
+        startActivity(RepositoryActivity.createIntent(getActivity(),
+                repository.getOwner().getLogin(), repository.getName()));
+        finish();
     }
 
     private void noticeBranchChanged(Branch branch){

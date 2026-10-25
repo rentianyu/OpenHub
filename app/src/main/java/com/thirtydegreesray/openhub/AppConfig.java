@@ -44,7 +44,7 @@ public class AppConfig {
 
     public final static String OPENHUB_CLIENT_SECRET = BuildConfig.OPENHUB_CLIENT_SECRET;
 
-    public final static String OAUTH2_SCOPE = "user,repo,gist,notifications";
+    public final static String OAUTH2_SCOPE = "user,repo,gist,notifications,delete_repo";
 
 
     public final static String OAUTH2_URL = GITHUB_BASE_URL + "login/oauth/authorize";

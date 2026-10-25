@@ -12,13 +12,16 @@ import com.thirtydegreesray.openhub.mvp.model.Repository;
 import com.thirtydegreesray.openhub.mvp.model.User;
 
 import java.util.ArrayList;
+import java.util.Map;
 
 import okhttp3.ResponseBody;
 import retrofit2.Response;
+import retrofit2.http.Body;
 import retrofit2.http.DELETE;
 import retrofit2.http.GET;
 import retrofit2.http.Header;
 import retrofit2.http.Headers;
+import retrofit2.http.PATCH;
 import retrofit2.http.POST;
 import retrofit2.http.PUT;
 import retrofit2.http.Path;
@@ -211,6 +214,31 @@ public interface RepoService {
             @Path("owner") String owner,
             @Path("repo") String repo,
             @Path("tag") String tag
+    );
+
+    /**
+     * Create a repository for the authenticated user
+     */
+    @NonNull @POST("user/repos")
+    Observable<Response<Repository>> createRepo(@NonNull @Body Map<String, Object> params);
+
+    /**
+     * Update a repository
+     */
+    @NonNull @PATCH("repos/{owner}/{repo}")
+    Observable<Response<Repository>> updateRepo(
+            @NonNull @Path("owner") String owner,
+            @NonNull @Path("repo") String repo,
+            @NonNull @Body Map<String, Object> params
+    );
+
+    /**
+     * Delete a repository
+     */
+    @NonNull @DELETE("repos/{owner}/{repo}")
+    Observable<Response<ResponseBody>> deleteRepo(
+            @NonNull @Path("owner") String owner,
+            @NonNull @Path("repo") String repo
     );
 
 }

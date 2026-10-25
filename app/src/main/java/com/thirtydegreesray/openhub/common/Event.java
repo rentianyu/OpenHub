@@ -54,4 +54,22 @@ public class Event {
         }
     }
 
+    /**
+     * Posted after the authenticated user creates, updates or deletes a repository,
+     * so that repository lists can refresh themselves.
+     */
+    public static class RepoChangedEvent{
+        public static final int CREATED = 1;
+        public static final int UPDATED = 2;
+        public static final int DELETED = 3;
+
+        public final int action;
+        public final String fullName;
+
+        public RepoChangedEvent(int action, String fullName) {
+            this.action = action;
+            this.fullName = fullName;
+        }
+    }
+
 }
