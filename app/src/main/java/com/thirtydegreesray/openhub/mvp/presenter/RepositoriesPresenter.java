@@ -190,12 +190,15 @@ public class RepositoriesPresenter extends BasePagerPresenter<IRepositoriesContr
             @Override
             public void onSuccess(@NonNull HttpResponse<ArrayList<Repository>> response) {
                 mView.hideLoading();
+                // 过滤被 GitHub 禁用（disabled=true，例如因违反 ToS 被封锁）的仓库：
+                // 列表接口仍会返回它们，但任何访问都要 403 "Repository access blocked"，显示出来只会点开即报错
+                ArrayList<Repository> body = removeDisabledRepos(response.body());
                 if (isReLoad || readCacheFirst || repos == null || page == 1) {
-                    repos = response.body();
+                    repos = body;
                 } else {
-                    repos.addAll(response.body());
+                    repos.addAll(body);
                 }
-                if (response.body().size() == 0 && repos.size() != 0) {
+                if (body.size() == 0 && repos.size() != 0) {
                     mView.setCanLoadMore(false);
                 } else {
                     mView.showRepositories(repos);
@@ -217,6 +220,24 @@ public class RepositoriesPresenter extends BasePagerPresenter<IRepositoriesContr
     public void loadRepositories(RepositoriesFilter filter) {
         this.filter = filter;
         loadRepositories(false, 1);
+    }
+
+    /**
+     * 移除被 GitHub 禁用（disabled=true，通常是因违反 ToS 被封锁）的仓库。
+     * 这类仓库在列表接口中仍会返回，但打开必然 403 "Repository access blocked"。
+     */
+    private static ArrayList<Repository> removeDisabledRepos(@Nullable ArrayList<Repository> list) {
+        if (list == null || list.isEmpty()) {
+            return list;
+        }
+        ArrayList<Repository> result = new ArrayList<>(list.size());
+        for (Repository repository : list) {
+            if (repository == null || repository.isDisabled()) {
+                continue;
+            }
+            result.add(repository);
+        }
+        return result;
     }
 
     private Observable<Response<ArrayList<Repository>>> getObservable(boolean forceNetWork, int page) {

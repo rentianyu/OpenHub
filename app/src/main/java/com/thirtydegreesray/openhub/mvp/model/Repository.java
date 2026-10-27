@@ -62,6 +62,9 @@ public class Repository implements Parcelable {
 
     private String homepage;
     private boolean archived;
+    /** GitHub 将仓库置为 disabled 时（如因违反 ToS 被封），列表接口仍会返回该仓库，
+     *  但任何访问都会 403 "Repository access blocked"，此类仓库不显示在仓库列表中。 */
+    private boolean disabled;
 
     private int sinceStargazersCount ;
     private TrendingSince since;
@@ -399,6 +402,14 @@ public class Repository implements Parcelable {
         this.archived = archived;
     }
 
+    public boolean isDisabled() {
+        return disabled;
+    }
+
+    public void setDisabled(boolean disabled) {
+        this.disabled = disabled;
+    }
+
     public int getSinceStargazersCount() {
         return sinceStargazersCount;
     }
@@ -456,6 +467,7 @@ public class Repository implements Parcelable {
         dest.writeInt(this.since == null ? -1 : this.since.ordinal());
         dest.writeString(this.homepage);
         dest.writeByte(this.archived ? (byte) 1 : (byte) 0);
+        dest.writeByte(this.disabled ? (byte) 1 : (byte) 0);
 
     }
 
@@ -498,6 +510,7 @@ public class Repository implements Parcelable {
         this.since = tmpTrendingSince == -1 ? null : TrendingSince.values()[tmpTrendingSince];
         this.homepage = in.readString();
         this.archived = in.readByte() != 0;
+        this.disabled = in.readByte() != 0;
     }
 
     public static final Creator<Repository> CREATOR = new Creator<Repository>() {
